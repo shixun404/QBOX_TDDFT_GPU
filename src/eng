@@ -1,0 +1,1300 @@
+24,27d23
+< #include "RTVectorPotential.h"
+< #include "RTPosition.h"
+< #include "MPIdata.h"
+< #include "D3vector.h"
+36,44d31
+< // Developed by Dr. Min Choi and Prof. Bryan Wong in UCR
+< ////////////////////////////////////////////////////////////////////////////////
+< NonLocalPotential::NonLocalPotential(const AtomSet& as, const SlaterDet& sd, const bool rtvp, RTVectorPotential* vp) :
+< ctxt_(sd.context()), atoms_(as), sd_(sd), basis_(sd.basis()), rtvp_(rtvp), vp_(vp) 
+< {
+<   init(); 
+< }
+< 
+< ////////////////////////////////////////////////////////////////////////////////
+248,653d234
+< void NonLocalPotential::update_twnl_dk(D3vector deltakick_amp, RTPosition rtp, int ikp_loc)
+< {
+<   //const int ngwl = basis_.localsize();
+<   //double sol = 137.03599911;
+<   //double alpha = 1.0/sol;
+< 
+<   //for ( int is = 0; is < nsp; is++ )
+<   //{
+<   //  for ( int ipr = 0; ipr < npr[is]; ipr++ )
+<   //  {
+<   //    // twnl[is][ig+ngwl*ipr]
+<   //    vector<complex<double> > tmp(rtp.ft_wfc(ikp_loc)->np012loc());
+<   //    vector<complex<double> > tmpnl(ngwl);
+<   //    double *t = &twnl[is][ngwl*ipr];
+<   //    for ( int ig = 0; ig < ngwl; ig++ )
+<   //    {
+<   //      tmpnl[ig] = complex<double>(t[ig], 0.0);
+<   //      tmp[ig] = complex<double>(0.0, 0.0);
+< //////////if ( MPIdata::onpe0() )
+< //////////  cout << "RTNonLocalTest a-1: " << ig << "  |  " << twnl[is][ngwl*ipr + ig] << "  |  " << tmpnl[ig] << endl;
+<   //    }
+<   //    rtp.ft_wfc(ikp_loc)->backward(&tmpnl[0], &tmp[0]);
+<   //    for ( int ir = 0; ir < rtp.ft_wfc(ikp_loc)->np012loc(); ir++ )
+<   //    {
+< //////////if ( MPIdata::onpe0() )
+< //////////	cout << "RTNonLocalTest b-1: " << ir << "  |  " << tmp[ir] << endl;
+<   //      double phase = - deltakick_amp.x * rtp.rt_position_wfc(ikp_loc, ir).x - deltakick_amp.y * rtp.rt_position_wfc(ikp_loc, ir).y - deltakick_amp.z * rtp.rt_position_wfc(ikp_loc, ir).z;
+<   //      phase = phase * alpha;
+<   //      tmp[ir] *= complex<double>(cos(phase), sin(phase));
+< //////////if ( MPIdata::onpe0() )
+< //////////	cout << "RTNonLocalTest b-2: " << ir << "  |  " << tmp[ir] << endl;
+<   //    }
+<   //    rtp.ft_wfc(ikp_loc)->forward(&tmp[0], &tmpnl[0]);
+<   //    for ( int ig = 0; ig < ngwl; ig++ )
+<   //    {
+<   //      t[ig] = tmpnl[ig].real();
+< //////////if ( MPIdata::onpe0() )
+< //////////  cout << "RTNonLocalTest a-2: " << ig << "  |  " << twnl[is][ngwl*ipr + ig] << "  |  " << tmpnl[ig] << endl;
+<   //    }
+<   //  }
+<   //}
+<   //cout << "RTNonLocalTest4 : " << MPIdata::rank() << "  |  " << deltakick_amp << endl;
+< }
+< 
+< ////////////////////////////////////////////////////////////////////////////////
+< // Developed by Dr. Min Choi and Prof. Bryan Wong in UCR
+< ////////////////////////////////////////////////////////////////////////////////
+< void NonLocalPotential::nlpsi(SlaterDet& psd, SlaterDet& hsd)
+< {
+<   const int ngwl = basis_.localsize();
+<   // define atom block size
+<   const int na_block_size = 32;
+<   valarray<double> gr(na_block_size*ngwl); // gr[ig+ia*ngwl]
+<   valarray<double> cgr(na_block_size*ngwl); // cgr[ig+ia*ngwl]
+<   valarray<double> sgr(na_block_size*ngwl); // sgr[ig+ia*ngwl]
+<   vector<vector<double> > tau;
+<   atoms_.get_positions(tau);
+< 
+<   const double omega = basis_.cell().volume();
+<   assert(omega != 0.0);
+<   const double omega_inv = 1.0 / omega;
+< 
+<   for ( int is = 0; is < nsp; is++ )
+<   {
+<     Species *s = atoms_.species_list[is];
+<     if ( npr[is] > 0 ) // species is is non-local
+<     {
+<       valarray<double> tmpfion(3*na[is]);
+<       tmpfion = 0.0;
+<       // define number of atom blocks
+<       const int na_blocks = na[is] / na_block_size +
+<                             ( na[is] % na_block_size == 0 ? 0 : 1 );
+< 
+<       valarray<double> anl_loc(npr[is]*na_block_size*2*ngwl);
+<       const int nstloc = psd.nstloc();
+<       // fnl_loc[ipra][n]
+<       // fnl is real if basis is real, complex otherwise
+<       const int fnl_loc_size = basis_.real() ? npr[is]*na_block_size*nstloc :
+<         2*npr[is]*na_block_size*nstloc;
+<       valarray<double> fnl_loc(fnl_loc_size);
+<       valarray<double> fnl_buf(fnl_loc_size);
+<       for ( int ia_block = 0; ia_block < na_blocks; ia_block++ )
+<       {
+<         // process projectors of atoms in block ia_block
+< 
+<         const int iastart = ia_block * na_block_size;
+<         const int iaend = (ia_block+1) * na_block_size < na[is] ?
+<                         (ia_block+1) * na_block_size :
+<                         na[is];
+<         const int ia_block_size = iaend - iastart;
+< 
+<         // compute cgr[is][ia][ig], sgr[is][ia][ig]
+<         tmap["comp_eigr"].start();
+<         int k = 3;
+<         double mone = -1.0, zero = 0.0;
+<         char cn='n';
+< 
+<         // next line: const cast is ok since dgemm_ does not modify argument
+<         double* kpgx = const_cast<double*>(basis_.kpgx_ptr(0));
+<         if ( rtvp_ ) kpgx = vp_->get_kpgpax(basis_, 0);
+<         int lda = max(1,ngwl);
+<         int ldc = lda;
+<         dgemm(&cn,&cn,(int*)&ngwl,(int*)&ia_block_size,&k,&mone,
+<               kpgx,&lda,&tau[is][3*iastart],&k,
+<               &zero,&gr[0],&ldc);
+< 
+<         int len = ia_block_size * ngwl;
+< #if USE_MASSV
+<         vsincos(&sgr[0],&cgr[0],&gr[0],&len);
+< #else
+<         for ( int i = 0; i < len; i++ )
+<         {
+<           const double arg = gr[i];
+<           sgr[i] = sin(arg);
+<           cgr[i] = cos(arg);
+<         }
+< #endif
+<         tmap["comp_eigr"].stop();
+< 
+<         // compute anl_loc
+<         tmap["comp_anl"].start();
+<         for ( int ipr = 0; ipr < npr[is]; ipr++ )
+<         {
+<           // twnl[is][ig+ngwl*ipr]
+<           const double * t = &twnl[is][ngwl*ipr];
+<           const int l = lproj[is][ipr];
+< 
+<           // anl_loc[ig+ipra*ngwl]
+< 
+<           for ( int ia = 0; ia < ia_block_size; ia++ )
+<           {
+<             double* a = &anl_loc[2*(ia+ipr*ia_block_size)*ngwl];
+<             const double* c = &cgr[ia*ngwl];
+<             const double* s = &sgr[ia*ngwl];
+<             if ( l == 0 )
+<             {
+<               for ( int ig = 0; ig < ngwl; ig++ )
+<               {
+<                 a[2*ig]   = t[ig] * c[ig];
+<                 a[2*ig+1] = t[ig] * s[ig];
+<               }
+<             }
+<             else if ( l == 1 )
+<             {
+<               for ( int ig = 0; ig < ngwl; ig++ )
+<               {
+<                 /* Next line: -i * eigr */
+<                 /* -i * (a+i*b) = b - i*a */
+<                 a[2*ig]   =  t[ig] * s[ig];
+<                 a[2*ig+1] = -t[ig] * c[ig];
+<               }
+<             }
+<             else if ( l == 2 )
+<             {
+<               for ( int ig = 0; ig < ngwl; ig++ )
+<               {
+<                 // Next line: (-) sign for -eigr
+<                 a[2*ig]   = -t[ig] * c[ig];
+<                 a[2*ig+1] = -t[ig] * s[ig];
+<               }
+<             }
+<             else if ( l == 3 )
+<             {
+<               for ( int ig = 0; ig < ngwl; ig++ )
+<               {
+<                 // Next line: i * eigr
+<                 // i * (a+i*b) = -b + i*a
+<                 a[2*ig]   = -t[ig] * s[ig];
+<                 a[2*ig+1] =  t[ig] * c[ig];
+<               }
+<             }
+<           }
+<         } // ipr
+<         tmap["comp_anl"].stop();
+< 
+<         // array anl_loc is complete
+< 
+<         // compute fnl[npra][nstloc] = anl^T * c
+<         int nprnaloc = ia_block_size * npr[is];
+<         if ( basis_.real() )
+<         {
+<           double one=1.0;
+<           char ct='t';
+<           int twongwl = 2 * ngwl;
+<           int lda = max(1,twongwl);
+<           int ldb = max(1,2*psd.c().mloc());
+<           int ldc = max(1,nprnaloc);
+<           const complex<double>* c = psd.c().cvalptr();
+<           tmap["fnl_gemm"].start();
+<           dgemm(&ct,&cn,&nprnaloc,(int*)&nstloc,&twongwl,&one,
+<                 &anl_loc[0],&lda,(double*)c,&ldb,
+<                 &zero,&fnl_loc[0],&ldc);
+<           tmap["fnl_gemm"].stop();
+< 
+<           // correct for double counting if ctxt_.myrow() == 0
+<           if ( ctxt_.myrow() == 0 )
+<           {
+<             // rank-one update
+<             // dger(m,n,alpha,x,incx,y,incy,a,lda);
+<             // a += alpha * x * transpose(y)
+<             // x = first row of anl_loc
+<             // y^T = first row of c
+<             double alpha = -0.5;
+<             dger(&nprnaloc,(int*)&nstloc,&alpha,&anl_loc[0],&lda,
+<                  (double*)c,&ldb,&fnl_loc[0],&ldc);
+<           }
+<         }
+<         else
+<         {
+<           // fnl is complex
+<           complex<double> cone=1.0;
+<           complex<double> czero=0.0;
+<           char cc='c';
+<           int lda = max(1,ngwl);
+<           int ldb = max(1,psd.c().mloc());
+<           int ldc = max(1,nprnaloc);
+<           const complex<double>* c = psd.c().cvalptr();
+<           tmap["fnl_zemm"].start();
+<           zgemm(&cc,&cn,&nprnaloc,(int*)&nstloc,(int*)&ngwl,&cone,
+<                 (complex<double>*) &anl_loc[0],&lda,
+<                 (complex<double>*) c,&ldb,&czero,
+<                 (complex<double>*) &fnl_loc[0],&ldc);
+<           tmap["fnl_zemm"].stop();
+<         }
+< 
+< #if USE_MPI
+<         tmap["fnl_allreduce"].start();
+<         // Allreduce fnl partial sum
+<         MPI_Comm basis_comm = basis_.comm();
+<         int fnl_size = basis_.real() ? nprnaloc*nstloc : 2*nprnaloc*nstloc;
+<         MPI_Allreduce(&fnl_loc[0],&fnl_buf[0],fnl_size,
+<                       MPI_DOUBLE,MPI_SUM,basis_comm);
+<         tmap["fnl_allreduce"].stop();
+< 
+<         // factor 2.0 in next line is: counting G, -G
+<         if ( basis_.real() )
+<           fnl_loc = 2.0 * fnl_buf;
+<         else
+<           fnl_loc = fnl_buf;
+< #else
+<         // factor 2.0 in next line is: counting G, -G
+<         if ( basis_.real() )
+<           fnl_loc *= 2.0;
+< #endif
+< 
+<         // if the species has multiple projectors, that are not orthogonal
+<         // multiply with D matrix
+<         if ( s->has_dmatrix() )
+<         {
+<           if ( basis_.real() )
+<           {
+<             // helper variables
+<             double one = 1.0;
+<             double zero = 0.0;
+<             const size_t dsize = nprnaloc * nprnaloc;
+<             //
+<             // construct D matrix
+<             //
+<             // allocate array
+<             valarray<double> dmatrix(zero,dsize);
+<             // loop over all elements
+<             for ( int i = 0; i < nprnaloc; i++ )
+<             {
+<               // extract atom, l, and m corresponding to this index
+<               const int iatom = i % ia_block_size;
+<               const int ipr = i / ia_block_size;
+<               for ( int j = 0; j <= i; j++ )
+<               {
+<                 // extract atom, l, and m corresponding to this index
+<                 const int jatom = j % ia_block_size;
+<                 const int jpr = j / ia_block_size;
+<                 // D matrix is diagonal in atom, l, and m
+<                 if ( iatom != jatom ) continue;
+<                 const double val = s->dmatrix(ipr,jpr);
+<                 dmatrix[nprnaloc * i + j] = val;
+<                 // matrix is symmetric
+<                 if ( i != j ) dmatrix[nprnaloc * j + i] = val;
+<               }
+<             }
+<             // multiply F'_In = D_IJ F_Jn
+<             int lda = max(1,nprnaloc);
+<             int ldb = lda;
+<             int ldc = lda;
+<             dgemm(&cn,&cn,&nprnaloc,(int*) &nstloc,&nprnaloc,&one,&dmatrix[0],
+<               &lda,&fnl_loc[0],&ldb,&zero,&fnl_buf[0],&ldc);
+<           }
+<           else
+<           {
+<             // helper variables
+<             complex<double> one = 1.0;
+<             complex<double> zero = 0.0;
+<             const size_t dsize = nprnaloc * nprnaloc;
+<             //
+<             // construct D matrix
+<             //
+<             // allocate array
+<             valarray < complex<double> > dmatrix(zero,dsize);
+<             // loop over all elements
+<             for ( int i = 0; i < nprnaloc; i++ )
+<             {
+<               // extract atom, l, and m corresponding to this index
+<               const int iatom = i % ia_block_size;
+<               const int ipr = i / ia_block_size;
+<               for ( int j = 0; j <= i; j++ )
+<               {
+<                 // extract atom, l, and m corresponding to this index
+<                 const int jatom = j % ia_block_size;
+<                 const int jpr = j / ia_block_size;
+<                 // D matrix is diagonal in atom, l, and m
+<                 if ( iatom != jatom ) continue;
+<                 const double val = s->dmatrix(ipr,jpr);
+<                 dmatrix[nprnaloc * i + j] = val;
+<                 // matrix is symmetric
+<                 if ( i != j ) dmatrix[nprnaloc * j + i] = val;
+<               }
+<             }
+<             // multiply F'_In = D_IJ F_Jn
+<             int lda = max(1,nprnaloc);
+<             int ldb = lda;
+<             int ldc = lda;
+<             zgemm(&cn,&cn,&nprnaloc,(int*) &nstloc,&nprnaloc,&one,&dmatrix[0],
+<               &lda,(complex<double>*) &fnl_loc[0],&ldb,&zero,
+<               (complex<double>*) &fnl_buf[0],&ldc);
+<           }
+<         }
+<         else
+<         {
+<           fnl_buf = fnl_loc;
+<         }
+< 
+<         // accumulate Enl contribution
+<         const int nbase = ctxt_.mycol() * psd.c().nb();
+<         if ( basis_.real() )
+<         {
+<           for ( int ipr = 0; ipr < npr[is]; ipr++ )
+<           {
+<             const double fac = wt[is][ipr] * omega_inv;
+<             for ( int n = 0; n < nstloc; n++ )
+<             {
+<               for ( int ia = 0; ia < ia_block_size; ia++ )
+<               {
+<                 const int i = ia + ipr*ia_block_size + n * nprnaloc;
+<                 fnl_loc[i] = fac * fnl_buf[i];
+<               }
+<             }
+<           }
+<         }
+<         else
+<         {
+<           // fnl is complex
+<           for ( int ipr = 0; ipr < npr[is]; ipr++ )
+<           {
+<             const double fac = wt[is][ipr] * omega_inv;
+<             for ( int n = 0; n < nstloc; n++ )
+<             {
+<               for ( int ia = 0; ia < ia_block_size; ia++ )
+<               {
+<                 const int i = ia + ipr*ia_block_size + n * nprnaloc;
+<                 const double f_re = fnl_loc[2*i];
+<                 const double f_im = fnl_loc[2*i+1];
+<                 const double fb_re = fnl_buf[2*i];
+<                 const double fb_im = fnl_buf[2*i+1];
+<                 fnl_loc[2*i] = fac * fb_re;
+<                 fnl_loc[2*i+1] = fac * fb_im;
+<               }
+<             }
+<           }
+<         }
+< 
+<         if ( basis_.real() )
+<         {
+<           tmap["enl_hpsi"].start();
+<           // compute cp += anl * fnl
+<           complex<double>* cp = hsd.c().valptr();
+<           int twongwl = 2 * ngwl;
+<           int lda = max(1,twongwl);
+<           int ldb = max(1,nprnaloc);
+<           int ldc = max(1,2*hsd.c().mloc());
+<           double one = 1.0;
+<           dgemm(&cn,&cn,&twongwl,(int*)&nstloc,&nprnaloc,&one,
+<                 &anl_loc[0],&lda,&fnl_loc[0],&ldb,
+<                 &one,(double*)cp,&ldc);
+<           tmap["enl_hpsi"].stop();
+<         }
+<         else
+<         {
+<           tmap["enl_hpsi"].start();
+<           // compute cp += anl * fnl
+<           complex<double>* cp = hsd.c().valptr();
+<           int lda = max(1,ngwl);
+<           int ldb = max(1,nprnaloc);
+<           int ldc = max(1,hsd.c().mloc());
+<           complex<double> cone = 1.0;
+<           zgemm(&cn,&cn,(int*)&ngwl,(int*)&nstloc,&nprnaloc,&cone,
+<                 (complex<double>*) &anl_loc[0],&lda,
+<                 (complex<double>*) &fnl_loc[0],&ldb,
+<                 &cone,cp,&ldc);
+<           tmap["enl_hpsi"].stop();
+<         }
+<         if ( rtvp_ ) delete [] kpgx;
+<       } // ia_block
+<     } // npr[is]>0
+<   } // is
+< }
+< 
+< ////////////////////////////////////////////////////////////////////////////////
+684,694d264
+< ////////////////////////////////////////////////////////////////////////////////
+< // Developed by Dr. Min Choi and Prof. Bryan Wong in UCR
+<   if ( rtvp_ )
+<   {
+<     kpg = vp_->get_kpgpa(basis_);
+<     kpgi = vp_->get_kpgpai(basis_);
+<     kpg_x = vp_->get_kpgpax(basis_, 0);
+<     kpg_y = vp_->get_kpgpax(basis_, 1);
+<     kpg_z = vp_->get_kpgpax(basis_, 2);
+<   }
+< ////////////////////////////////////////////////////////////////////////////////
+1684,1694d1253
+< ////////////////////////////////////////////////////////////////////////////////
+< // Developed by Dr. Min Choi and Prof. Bryan Wong in UCR
+<   if ( rtvp_ )
+<   {
+<     delete [] kpg;
+<     delete [] kpgi;
+<     delete [] kpg_x;
+<     delete [] kpg_y;
+<     delete [] kpg_z;
+<   }
+< ////////////////////////////////////////////////////////////////////////////////
+1699,2528d1257
+< double NonLocalPotential::energy(SlaterDet& rsd, bool compute_hpsi, SlaterDet& dsd,
+<     bool compute_forces, vector<vector<double> >& fion_enl,
+<     bool compute_stress, valarray<double>& sigma_enl)
+< {
+<   for ( int is = 0; is < fion_enl.size(); is++ )
+<     for ( int i = 0; i < fion_enl[is].size(); i++ )
+<        fion_enl[is][i] = 0.0;
+<   sigma_enl = 0.0;
+< 
+<   if ( nspnl == 0 ) return 0.0;
+< 
+<   double enl = 0.0;
+<   double tsum[6] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+<   const vector<double>& occ = rsd.occ();
+<   const int ngwl = basis_.localsize();
+<   // define atom block size
+<   const int na_block_size = 32;
+<   valarray<double> gr(na_block_size*ngwl); // gr[ig+ia*ngwl]
+<   valarray<double> cgr(na_block_size*ngwl); // cgr[ig+ia*ngwl]
+<   valarray<double> sgr(na_block_size*ngwl); // sgr[ig+ia*ngwl]
+<   vector<vector<double> > tau;
+<   atoms_.get_positions(tau);
+< 
+<   const double omega = basis_.cell().volume();
+<   assert(omega != 0.0);
+<   const double omega_inv = 1.0 / omega;
+< 
+<   for ( int is = 0; is < nsp; is++ )
+<   {
+<     Species *s = atoms_.species_list[is];
+<     if ( npr[is] > 0 ) // species is is non-local
+<     {
+<       valarray<double> tmpfion(3*na[is]);
+<       tmpfion = 0.0;
+<       // define number of atom blocks
+<       const int na_blocks = na[is] / na_block_size +
+<                             ( na[is] % na_block_size == 0 ? 0 : 1 );
+< 
+<       valarray<double> anl_loc(npr[is]*na_block_size*2*ngwl);
+<       const int nstloc = rsd.nstloc();
+<       // fnl_loc[ipra][n]
+<       // fnl is real if basis is real, complex otherwise
+<       const int fnl_loc_size = basis_.real() ? npr[is]*na_block_size*nstloc :
+<         2*npr[is]*na_block_size*nstloc;
+<       valarray<double> fnl_loc(fnl_loc_size);
+<       valarray<double> fnl_buf(fnl_loc_size);
+<       for ( int ia_block = 0; ia_block < na_blocks; ia_block++ )
+<       {
+<         // process projectors of atoms in block ia_block
+< 
+<         const int iastart = ia_block * na_block_size;
+<         const int iaend = (ia_block+1) * na_block_size < na[is] ?
+<                         (ia_block+1) * na_block_size :
+<                         na[is];
+<         const int ia_block_size = iaend - iastart;
+< 
+<         // compute cgr[is][ia][ig], sgr[is][ia][ig]
+<         tmap["comp_eigr"].start();
+<         int k = 3;
+<         double mone = -1.0, zero = 0.0;
+<         char cn='n';
+< 
+<         // next line: const cast is ok since dgemm_ does not modify argument
+<         double* kpgx = const_cast<double*>(basis_.kpgx_ptr(0));
+< ////////////////////////////////////////////////////////////////////////////////
+< // Developed by Dr. Min Choi and Prof. Bryan Wong in UCR
+<         if ( rtvp_ ) kpgx = vp_->get_kpgpax(basis_, 0);
+< ////////////////////////////////////////////////////////////////////////////////
+<         int lda = max(1,ngwl);
+<         int ldc = lda;
+<         dgemm(&cn,&cn,(int*)&ngwl,(int*)&ia_block_size,&k,&mone,
+<               kpgx,&lda,&tau[is][3*iastart],&k,
+<               &zero,&gr[0],&ldc);
+< 
+<         int len = ia_block_size * ngwl;
+< #if USE_MASSV
+<         vsincos(&sgr[0],&cgr[0],&gr[0],&len);
+< #else
+<         for ( int i = 0; i < len; i++ )
+<         {
+<           const double arg = gr[i];
+<           sgr[i] = sin(arg);
+<           cgr[i] = cos(arg);
+<         }
+< #endif
+<         tmap["comp_eigr"].stop();
+< 
+<         // compute anl_loc
+<         tmap["comp_anl"].start();
+<         for ( int ipr = 0; ipr < npr[is]; ipr++ )
+<         {
+<           // twnl[is][ig+ngwl*ipr]
+<           const double * t = &twnl[is][ngwl*ipr];
+<           const int l = lproj[is][ipr];
+< 
+<           // anl_loc[ig+ipra*ngwl]
+< 
+<           for ( int ia = 0; ia < ia_block_size; ia++ )
+<           {
+<             double* a = &anl_loc[2*(ia+ipr*ia_block_size)*ngwl];
+<             const double* c = &cgr[ia*ngwl];
+<             const double* s = &sgr[ia*ngwl];
+<             if ( l == 0 )
+<             {
+<               for ( int ig = 0; ig < ngwl; ig++ )
+<               {
+<                 a[2*ig]   = t[ig] * c[ig];
+<                 a[2*ig+1] = t[ig] * s[ig];
+<               }
+<             }
+<             else if ( l == 1 )
+<             {
+<               for ( int ig = 0; ig < ngwl; ig++ )
+<               {
+<                 /* Next line: -i * eigr */
+<                 /* -i * (a+i*b) = b - i*a */
+<                 a[2*ig]   =  t[ig] * s[ig];
+<                 a[2*ig+1] = -t[ig] * c[ig];
+<               }
+<             }
+<             else if ( l == 2 )
+<             {
+<               for ( int ig = 0; ig < ngwl; ig++ )
+<               {
+<                 // Next line: (-) sign for -eigr
+<                 a[2*ig]   = -t[ig] * c[ig];
+<                 a[2*ig+1] = -t[ig] * s[ig];
+<               }
+<             }
+<             else if ( l == 3 )
+<             {
+<               for ( int ig = 0; ig < ngwl; ig++ )
+<               {
+<                 // Next line: i * eigr
+<                 // i * (a+i*b) = -b + i*a
+<                 a[2*ig]   = -t[ig] * s[ig];
+<                 a[2*ig+1] =  t[ig] * c[ig];
+<               }
+<             }
+<           }
+<         } // ipr
+<         tmap["comp_anl"].stop();
+< 
+<         // array anl_loc is complete
+< 
+<         // compute fnl[npra][nstloc] = anl^T * c
+<         int nprnaloc = ia_block_size * npr[is];
+<         if ( basis_.real() )
+<         {
+<           double one=1.0;
+<           char ct='t';
+<           int twongwl = 2 * ngwl;
+<           int lda = max(1,twongwl);
+<           int ldb = max(1,2*rsd.c().mloc());
+<           int ldc = max(1,nprnaloc);
+<           const complex<double>* c = rsd.c().cvalptr();
+<           tmap["fnl_gemm"].start();
+<           dgemm(&ct,&cn,&nprnaloc,(int*)&nstloc,&twongwl,&one,
+<                 &anl_loc[0],&lda,(double*)c,&ldb,
+<                 &zero,&fnl_loc[0],&ldc);
+<           tmap["fnl_gemm"].stop();
+< 
+<           // correct for double counting if ctxt_.myrow() == 0
+<           if ( ctxt_.myrow() == 0 )
+<           {
+<             // rank-one update
+<             // dger(m,n,alpha,x,incx,y,incy,a,lda);
+<             // a += alpha * x * transpose(y)
+<             // x = first row of anl_loc
+<             // y^T = first row of c
+<             double alpha = -0.5;
+<             dger(&nprnaloc,(int*)&nstloc,&alpha,&anl_loc[0],&lda,
+<                  (double*)c,&ldb,&fnl_loc[0],&ldc);
+<           }
+<         }
+<         else
+<         {
+<           // fnl is complex
+<           complex<double> cone=1.0;
+<           complex<double> czero=0.0;
+<           char cc='c';
+<           int lda = max(1,ngwl);
+<           int ldb = max(1,rsd.c().mloc());
+<           int ldc = max(1,nprnaloc);
+<           const complex<double>* c = rsd.c().cvalptr();
+<           tmap["fnl_zemm"].start();
+<           zgemm(&cc,&cn,&nprnaloc,(int*)&nstloc,(int*)&ngwl,&cone,
+<                 (complex<double>*) &anl_loc[0],&lda,
+<                 (complex<double>*) c,&ldb,&czero,
+<                 (complex<double>*) &fnl_loc[0],&ldc);
+<           tmap["fnl_zemm"].stop();
+<         }
+< 
+< #if USE_MPI
+<         tmap["fnl_allreduce"].start();
+<         // Allreduce fnl partial sum
+<         MPI_Comm basis_comm = basis_.comm();
+<         int fnl_size = basis_.real() ? nprnaloc*nstloc : 2*nprnaloc*nstloc;
+<         MPI_Allreduce(&fnl_loc[0],&fnl_buf[0],fnl_size,
+<                       MPI_DOUBLE,MPI_SUM,basis_comm);
+<         tmap["fnl_allreduce"].stop();
+< 
+<         // factor 2.0 in next line is: counting G, -G
+<         if ( basis_.real() )
+<           fnl_loc = 2.0 * fnl_buf;
+<         else
+<           fnl_loc = fnl_buf;
+< #else
+<         // factor 2.0 in next line is: counting G, -G
+<         if ( basis_.real() )
+<           fnl_loc *= 2.0;
+< #endif
+< 
+<         // if the species has multiple projectors, that are not orthogonal
+<         // multiply with D matrix
+<         if ( s->has_dmatrix() )
+<         {
+<           if ( basis_.real() )
+<           {
+<             // helper variables
+<             double one = 1.0;
+<             double zero = 0.0;
+<             const size_t dsize = nprnaloc * nprnaloc;
+<             //
+<             // construct D matrix
+<             //
+<             // allocate array
+<             valarray<double> dmatrix(zero,dsize);
+<             // loop over all elements
+<             for ( int i = 0; i < nprnaloc; i++ )
+<             {
+<               // extract atom, l, and m corresponding to this index
+<               const int iatom = i % ia_block_size;
+<               const int ipr = i / ia_block_size;
+<               for ( int j = 0; j <= i; j++ )
+<               {
+<                 // extract atom, l, and m corresponding to this index
+<                 const int jatom = j % ia_block_size;
+<                 const int jpr = j / ia_block_size;
+<                 // D matrix is diagonal in atom, l, and m
+<                 if ( iatom != jatom ) continue;
+<                 const double val = s->dmatrix(ipr,jpr);
+<                 dmatrix[nprnaloc * i + j] = val;
+<                 // matrix is symmetric
+<                 if ( i != j ) dmatrix[nprnaloc * j + i] = val;
+<               }
+<             }
+<             // multiply F'_In = D_IJ F_Jn
+<             int lda = max(1,nprnaloc);
+<             int ldb = lda;
+<             int ldc = lda;
+<             dgemm(&cn,&cn,&nprnaloc,(int*) &nstloc,&nprnaloc,&one,&dmatrix[0],
+<               &lda,&fnl_loc[0],&ldb,&zero,&fnl_buf[0],&ldc);
+<           }
+<           else
+<           {
+<             // helper variables
+<             complex<double> one = 1.0;
+<             complex<double> zero = 0.0;
+<             const size_t dsize = nprnaloc * nprnaloc;
+<             //
+<             // construct D matrix
+<             //
+<             // allocate array
+<             valarray < complex<double> > dmatrix(zero,dsize);
+<             // loop over all elements
+<             for ( int i = 0; i < nprnaloc; i++ )
+<             {
+<               // extract atom, l, and m corresponding to this index
+<               const int iatom = i % ia_block_size;
+<               const int ipr = i / ia_block_size;
+<               for ( int j = 0; j <= i; j++ )
+<               {
+<                 // extract atom, l, and m corresponding to this index
+<                 const int jatom = j % ia_block_size;
+<                 const int jpr = j / ia_block_size;
+<                 // D matrix is diagonal in atom, l, and m
+<                 if ( iatom != jatom ) continue;
+<                 const double val = s->dmatrix(ipr,jpr);
+<                 dmatrix[nprnaloc * i + j] = val;
+<                 // matrix is symmetric
+<                 if ( i != j ) dmatrix[nprnaloc * j + i] = val;
+<               }
+<             }
+<             // multiply F'_In = D_IJ F_Jn
+<             int lda = max(1,nprnaloc);
+<             int ldb = lda;
+<             int ldc = lda;
+<             zgemm(&cn,&cn,&nprnaloc,(int*) &nstloc,&nprnaloc,&one,&dmatrix[0],
+<               &lda,(complex<double>*) &fnl_loc[0],&ldb,&zero,
+<               (complex<double>*) &fnl_buf[0],&ldc);
+<           }
+<         }
+<         else
+<         {
+<           fnl_buf = fnl_loc;
+<         }
+< 
+<         // accumulate Enl contribution
+<         const int nbase = ctxt_.mycol() * rsd.c().nb();
+<         if ( basis_.real() )
+<         {
+<           for ( int ipr = 0; ipr < npr[is]; ipr++ )
+<           {
+<             const double fac = wt[is][ipr] * omega_inv;
+<             for ( int n = 0; n < nstloc; n++ )
+<             {
+<               const double facn = fac * occ[n + nbase];
+<               for ( int ia = 0; ia < ia_block_size; ia++ )
+<               {
+<                 const int i = ia + ipr*ia_block_size + n * nprnaloc;
+<                 //cout << "fnl_loc[ipr=" << ipr << ",ia=" << ia
+<                 //     << ",n=" << n << "]: " << fnl_loc[i] << endl;
+<                 enl += facn * fnl_loc[i] * fnl_buf[i];
+<                 fnl_loc[i] = fac * fnl_buf[i];
+<               }
+<             }
+<           }
+<         }
+<         else
+<         {
+<           // fnl is complex
+<           for ( int ipr = 0; ipr < npr[is]; ipr++ )
+<           {
+<             const double fac = wt[is][ipr] * omega_inv;
+<             for ( int n = 0; n < nstloc; n++ )
+<             {
+<               const double facn = fac * occ[n + nbase];
+<               for ( int ia = 0; ia < ia_block_size; ia++ )
+<               {
+<                 const int i = ia + ipr*ia_block_size + n * nprnaloc;
+<                 //cout << "fnl_loc[ipr=" << ipr << ",ia=" << ia
+<                 //     << ",n=" << n << "]: " << fnl_loc[i] << endl;
+<                 const double f_re = fnl_loc[2*i];
+<                 const double f_im = fnl_loc[2*i+1];
+<                 const double fb_re = fnl_buf[2*i];
+<                 const double fb_im = fnl_buf[2*i+1];
+<                 enl += facn * (f_re*fb_re + f_im*fb_im);
+<                 fnl_loc[2*i] = fac * fb_re;
+<                 fnl_loc[2*i+1] = fac * fb_im;
+<               }
+<             }
+<           }
+<         }
+< 
+<         if ( compute_hpsi )
+<         {
+<           if ( basis_.real() )
+<           {
+<             tmap["enl_hpsi"].start();
+<             // compute cp += anl * fnl
+<             complex<double>* cp = dsd.c().valptr();
+<             int twongwl = 2 * ngwl;
+<             int lda = max(1,twongwl);
+<             int ldb = max(1,nprnaloc);
+<             int ldc = max(1,2*dsd.c().mloc());
+<             double one = 1.0;
+<             dgemm(&cn,&cn,&twongwl,(int*)&nstloc,&nprnaloc,&one,
+<                   &anl_loc[0],&lda,&fnl_loc[0],&ldb,
+<                   &one,(double*)cp,&ldc);
+<             tmap["enl_hpsi"].stop();
+<           }
+<           else
+<           {
+<             tmap["enl_hpsi"].start();
+<             // compute cp += anl * fnl
+<             complex<double>* cp = dsd.c().valptr();
+<             int lda = max(1,ngwl);
+<             int ldb = max(1,nprnaloc);
+<             int ldc = max(1,dsd.c().mloc());
+<             complex<double> cone = 1.0;
+<             zgemm(&cn,&cn,(int*)&ngwl,(int*)&nstloc,&nprnaloc,&cone,
+<                   (complex<double>*) &anl_loc[0],&lda,
+<                   (complex<double>*) &fnl_loc[0],&ldb,
+<                   &cone,cp,&ldc);
+<             tmap["enl_hpsi"].stop();
+<           }
+<         }
+< 
+<         // ionic forces
+<         if ( compute_forces )
+<         {
+<           tmap["enl_fion"].start();
+< 
+<           valarray<double> dfnl_loc(fnl_loc_size);
+<           for ( int j = 0; j < 3; j++ )
+<           {
+<             const double *kpgxj = basis_.kpgx_ptr(j);
+< ////////////////////////////////////////////////////////////////////////////////
+< // Developed by Dr. Min Choi and Prof. Bryan Wong in UCR
+<             if ( rtvp_ ) kpgxj = vp_->get_kpgpax(basis_, j);
+< ////////////////////////////////////////////////////////////////////////////////
+< 
+<             // compute anl_loc
+<             for ( int ipr = 0; ipr < npr[is]; ipr++ )
+<             {
+<               // twnl[is][ig+ngwl*ipr]
+<               const double * t = &twnl[is][ngwl*ipr];
+<               const int l = lproj[is][ipr];
+< 
+<               // anl_loc[ig+ipra*ngwl]
+< 
+<               for ( int ia = 0; ia < ia_block_size; ia++ )
+<               {
+<                 double* a = &anl_loc[2*(ia+ipr*ia_block_size)*ngwl];
+<                 const double* c = &cgr[ia*ngwl];
+<                 const double* s = &sgr[ia*ngwl];
+<                 if ( l == 0 )
+<                 {
+<                   for ( int ig = 0; ig < ngwl; ig++ )
+<                   {
+<                     const double tt = kpgxj[ig] * t[ig];
+<                     // Next lines: -i * ( a + ib ) = b - ia
+<                     a[2*ig]   =  tt * s[ig];
+<                     a[2*ig+1] = -tt * c[ig];
+<                   }
+<                 }
+<                 else if ( l == 1 )
+<                 {
+<                   for ( int ig = 0; ig < ngwl; ig++ )
+<                   {
+<                     // Next lines: (-i)**2 * ( a + ib ) = - a - ib
+<                     const double tt = - kpgxj[ig] * t[ig];
+<                     a[2*ig]   = tt * c[ig];
+<                     a[2*ig+1] = tt * s[ig];
+<                   }
+<                 }
+<                 else if ( l == 2 )
+<                 {
+<                   for ( int ig = 0; ig < ngwl; ig++ )
+<                   {
+<                     // Next lines: (-i) * - ( a + ib ) = i*(a+ib) = - b + ia
+<                     const double tt = kpgxj[ig] * t[ig];
+<                     a[2*ig]   = -tt * s[ig];
+<                     a[2*ig+1] =  tt * c[ig];
+<                   }
+<                 }
+<                 else if ( l == 3 )
+<                 {
+<                   for ( int ig = 0; ig < ngwl; ig++ )
+<                   {
+<                     // Next lines: (-i)**4 * ( a + ib ) = a + ib
+<                     const double tt = kpgxj[ig] * t[ig];
+<                     a[2*ig]   = tt * c[ig];
+<                     a[2*ig+1] = tt * s[ig];
+<                   }
+<                 }
+<               }
+<             } // ipr
+< 
+<             // array anl_loc is complete
+< 
+<             // compute dfnl[npra][nstloc] = anl^T * c
+<             if ( basis_.real() )
+<             {
+<               // factor 2.0 in next line is: counting G, -G
+<               // Note: no need to correct for double counting of the
+<               // G=0 component which is always zero
+<               double two=2.0;
+<               char ct='t';
+<               const int twongwl = 2 * ngwl;
+<               const int nprnaloc = ia_block_size * npr[is];
+<               int lda = max(1,twongwl);
+<               int ldb = max(1,2*rsd.c().mloc());
+<               int ldc = max(1,nprnaloc);
+<               const complex<double>* c = rsd.c().cvalptr();
+<               dgemm(&ct,&cn,(int*)&nprnaloc,(int*)&nstloc,(int*)&twongwl,&two,
+<                     &anl_loc[0],&lda, (double*)c,&ldb,
+<                     &zero,&dfnl_loc[0],&ldc);
+<             }
+<             else
+<             {
+<               complex<double> cone=1.0;
+<               complex<double> czero=0.0;
+<               char cc='c';
+<               const int nprnaloc = ia_block_size * npr[is];
+<               int lda = max(1,ngwl);
+<               int ldb = max(1,rsd.c().mloc());
+<               int ldc = max(1,nprnaloc);
+<               const complex<double>* c = rsd.c().cvalptr();
+<               zgemm(&cc,&cn,(int*)&nprnaloc,(int*)&nstloc,(int*)&ngwl,&cone,
+<                     (complex<double>*) &anl_loc[0],&lda,
+<                     (complex<double>*) c,&ldb,
+<                     &czero,(complex<double>*) &dfnl_loc[0],&ldc);
+<             }
+< 
+<             // accumulate non-local contributions to forces
+<             if ( basis_.real() )
+<             {
+<               for ( int ipr = 0; ipr < npr[is]; ipr++ )
+<               {
+<                 for ( int n = 0; n < nstloc; n++ )
+<                 {
+<                   // Factor 2.0 in next line from derivative of |Fnl|^2
+<                   const double facn = 2.0 * occ[n + nbase];
+<                   for ( int ia = 0; ia < ia_block_size; ia++ )
+<                   {
+<                     const int ia_global = ia + iastart;
+<                     const int i = ia + ipr*ia_block_size + n * nprnaloc;
+<                     //cout << "fnl_loc[ipr=" << ipr << ",ia=" << ia
+<                     //     << ",n=" << n << "]: " << fnl_loc[i] << endl;
+<                     tmpfion[3*ia_global+j] -= facn *
+<                                               fnl_loc[i] * dfnl_loc[i];
+<                   }
+<                 }
+<               }
+<             }
+<             else
+<             {
+<               for ( int ipr = 0; ipr < npr[is]; ipr++ )
+<               {
+<                 for ( int n = 0; n < nstloc; n++ )
+<                 {
+<                   // Factor 2.0 in next line from derivative of |Fnl|^2
+<                   const double facn = 2.0 * occ[n + nbase];
+<                   for ( int ia = 0; ia < ia_block_size; ia++ )
+<                   {
+<                     const int ia_global = ia + iastart;
+<                     const int i = ia + ipr*ia_block_size + n * nprnaloc;
+<                     //cout << "fnl_loc[ipr=" << ipr << ",ia=" << ia
+<                     //     << ",n=" << n << "]: " << fnl_loc[i] << endl;
+<                     double f_re = fnl_loc[2*i];
+<                     double f_im = fnl_loc[2*i+1];
+<                     double df_re = dfnl_loc[2*i];
+<                     double df_im = dfnl_loc[2*i+1];
+<                     tmpfion[3*ia_global+j] -=
+<                       facn * ( f_re * df_re + f_im * df_im );
+<                   }
+<                 }
+<               }
+<             }
+< ////////////////////////////////////////////////////////////////////////////////
+< // Developed by Dr. Min Choi and Prof. Bryan Wong in UCR
+<             if ( rtvp_ ) delete [] kpgxj;
+< ////////////////////////////////////////////////////////////////////////////////
+<           } // j
+< 
+<           tmap["enl_fion"].stop();
+<         } // compute_forces
+< 
+<         if ( compute_stress )
+<         {
+<           tmap["enl_sigma"].start();
+<           valarray<double> dfnl_loc(fnl_loc_size);
+< 
+<           for ( int ij = 0; ij < 6; ij++ )
+<           {
+<             // compute anl_loc
+<             int ipr = 0;
+<             while ( ipr < npr[is] )
+<             {
+<               // twnl[is][ig+ngwl*ipr]
+<               const int l = lproj[is][ipr];
+<               if ( l == 0 )
+<               {
+<                 // dtwnl[is][ipr][ij][ngwl]
+<                 // index = ig + ngwl * ( ij + 6 * ipr))
+<                 // ipr = iquad + nquad[is] * ilm, where ilm = 0
+<                 const double *const dt0 = &dtwnl[is][ngwl*(ij+6*ipr)];
+<                 for ( int ia = 0; ia < ia_block_size; ia++ )
+<                 {
+<                   double* a0 = &anl_loc[2*(ia+ipr*ia_block_size)*ngwl];
+<                   const double* c = &cgr[ia*ngwl];
+<                   const double* s = &sgr[ia*ngwl];
+<                   for ( int ig = 0; ig < ngwl; ig++ )
+<                   {
+<                     const double d0 = dt0[ig];
+<                     // Next lines: -i * ( a + ib ) = b - ia
+<                     a0[2*ig]   =  d0 * c[ig];
+<                     a0[2*ig+1] =  d0 * s[ig];
+<                   }
+<                 }
+<               }
+<               else if ( l == 1 )
+<               {
+<                 const int ipr1 = ipr;
+<                 const int ipr2 = ipr + 1;
+<                 const int ipr3 = ipr + 2;
+<                 // dtwnl[is][ipr][ij][ngwl]
+<                 // index = ig + ngwl * ( ij + 6 * iprx ))
+<                 const double *dt1 = &dtwnl[is][ngwl*(ij+6*ipr1)];
+<                 const double *dt2 = &dtwnl[is][ngwl*(ij+6*ipr2)];
+<                 const double *dt3 = &dtwnl[is][ngwl*(ij+6*ipr3)];
+<                 for ( int ia = 0; ia < ia_block_size; ia++ )
+<                 {
+<                   double* a1 = &anl_loc[2*(ia+ipr1*ia_block_size)*ngwl];
+<                   double* a2 = &anl_loc[2*(ia+ipr2*ia_block_size)*ngwl];
+<                   double* a3 = &anl_loc[2*(ia+ipr3*ia_block_size)*ngwl];
+<                   const double* c = &cgr[ia*ngwl];
+<                   const double* s = &sgr[ia*ngwl];
+<                   for ( int ig = 0; ig < ngwl; ig++ )
+<                   {
+<                     const double d1 = dt1[ig];
+<                     const double d2 = dt2[ig];
+<                     const double d3 = dt3[ig];
+<                     // Next line: (-i)^l factor is -i
+<                     // Next line: -i * eigr
+<                     // -i * (a+i*b) = b - i*a
+<                     const double tc = -c[ig]; //  -cosgr[ia][ig]
+<                     const double ts =  s[ig]; //   singr[ia][ig]
+<                     a1[2*ig]   = d1 * ts;
+<                     a1[2*ig+1] = d1 * tc;
+<                     a2[2*ig]   = d2 * ts;
+<                     a2[2*ig+1] = d2 * tc;
+<                     a3[2*ig]   = d3 * ts;
+<                     a3[2*ig+1] = d3 * tc;
+<                   }
+<                 }
+<               }
+<               else if ( l == 2 )
+<               {
+<                 const int ipr4 = ipr;
+<                 const int ipr5 = ipr + 1;
+<                 const int ipr6 = ipr + 2;
+<                 const int ipr7 = ipr + 3;
+<                 const int ipr8 = ipr + 4;
+<                 // dtwnl[is][ipr][iquad][ij][ngwl]
+<                 // index = ig + ngwl * ( ij + 6 * ( iquad + nquad[is] * ipr ))
+<                 const double *dt4 = &dtwnl[is][ngwl*(ij+6*ipr4)];
+<                 const double *dt5 = &dtwnl[is][ngwl*(ij+6*ipr5)];
+<                 const double *dt6 = &dtwnl[is][ngwl*(ij+6*ipr6)];
+<                 const double *dt7 = &dtwnl[is][ngwl*(ij+6*ipr7)];
+<                 const double *dt8 = &dtwnl[is][ngwl*(ij+6*ipr8)];
+<                 for ( int ia = 0; ia < ia_block_size; ia++ )
+<                 {
+<                   double* a4 = &anl_loc[2*(ia+ipr4*ia_block_size)*ngwl];
+<                   double* a5 = &anl_loc[2*(ia+ipr5*ia_block_size)*ngwl];
+<                   double* a6 = &anl_loc[2*(ia+ipr6*ia_block_size)*ngwl];
+<                   double* a7 = &anl_loc[2*(ia+ipr7*ia_block_size)*ngwl];
+<                   double* a8 = &anl_loc[2*(ia+ipr8*ia_block_size)*ngwl];
+<                   const double* c = &cgr[ia*ngwl];
+<                   const double* s = &sgr[ia*ngwl];
+< 
+<                   for ( int ig = 0; ig < ngwl; ig++ )
+<                   {
+<                     const double d4 = dt4[ig];
+<                     const double d5 = dt5[ig];
+<                     const double d6 = dt6[ig];
+<                     const double d7 = dt7[ig];
+<                     const double d8 = dt8[ig];
+<                     // Next lines: (-i)^2 * ( a + ib ) =  - ( a + ib )
+<                     const double tc = -c[ig]; //  -cosgr[ia][ig]
+<                     const double ts = -s[ig]; //  -singr[ia][ig]
+<                     a4[2*ig]   = d4 * tc;
+<                     a4[2*ig+1] = d4 * ts;
+<                     a5[2*ig]   = d5 * tc;
+<                     a5[2*ig+1] = d5 * ts;
+<                     a6[2*ig]   = d6 * tc;
+<                     a6[2*ig+1] = d6 * ts;
+<                     a7[2*ig]   = d7 * tc;
+<                     a7[2*ig+1] = d7 * ts;
+<                     a8[2*ig]   = d8 * tc;
+<                     a8[2*ig+1] = d8 * ts;
+<                   }
+<                 }
+<               }
+<               else if ( l == 3 )
+<               {
+<                 const int ipr09 = ipr;
+<                 const int ipr10= ipr + 1;
+<                 const int ipr11= ipr + 2;
+<                 const int ipr12= ipr + 3;
+<                 const int ipr13= ipr + 4;
+<                 const int ipr14= ipr + 5;
+<                 const int ipr15= ipr + 6;
+<                 // dtwnl[is][ipr][iquad][ij][ngwl]
+<                 // index = ig + ngwl * ( ij + 6 * ( iquad + nquad[is] * ipr ))
+<                 const double *dt09 = &dtwnl[is][ngwl * ( ij + 6 * ipr09 )];
+<                 const double *dt10 = &dtwnl[is][ngwl * ( ij + 6 * ipr10 )];
+<                 const double *dt11 = &dtwnl[is][ngwl * ( ij + 6 * ipr11 )];
+<                 const double *dt12 = &dtwnl[is][ngwl * ( ij + 6 * ipr12 )];
+<                 const double *dt13 = &dtwnl[is][ngwl * ( ij + 6 * ipr13 )];
+<                 const double *dt14 = &dtwnl[is][ngwl * ( ij + 6 * ipr14 )];
+<                 const double *dt15 = &dtwnl[is][ngwl * ( ij + 6 * ipr15 )];
+<                 for ( int ia = 0; ia < ia_block_size; ia++ )
+<                 {
+<                   double* a09 = &anl_loc[2 * ( ia + ipr09 * ia_block_size ) * ngwl];
+<                   double* a10 = &anl_loc[2 * ( ia + ipr10 * ia_block_size ) * ngwl];
+<                   double* a11 = &anl_loc[2 * ( ia + ipr11 * ia_block_size ) * ngwl];
+<                   double* a12 = &anl_loc[2 * ( ia + ipr12 * ia_block_size ) * ngwl];
+<                   double* a13 = &anl_loc[2 * ( ia + ipr13 * ia_block_size ) * ngwl];
+<                   double* a14 = &anl_loc[2 * ( ia + ipr14 * ia_block_size ) * ngwl];
+<                   double* a15 = &anl_loc[2 * ( ia + ipr15 * ia_block_size ) * ngwl];
+<                   const double* c = &cgr[ia * ngwl];
+<                   const double* s = &sgr[ia * ngwl];
+< 
+<                   for ( int ig = 0; ig < ngwl; ig++ )
+<                   {
+<                     const double d09 = dt09[ig];
+<                     const double d10 = dt10[ig];
+<                     const double d11 = dt11[ig];
+<                     const double d12 = dt12[ig];
+<                     const double d13 = dt13[ig];
+<                     const double d14 = dt14[ig];
+<                     const double d15 = dt15[ig];
+<                     // Next lines: (-i)^2 * ( a + ib ) =  - ( a + ib )
+<                     const double tc =  c[ig]; //   cosgr[ia][ig]
+<                     const double ts = -s[ig]; //  -singr[ia][ig]
+<                     a09[2 * ig] = d09 * ts;
+<                     a09[2 * ig + 1] = d09 * tc;
+<                     a10[2 * ig] = d10 * ts;
+<                     a10[2 * ig + 1] = d10 * tc;
+<                     a11[2 * ig] = d11 * ts;
+<                     a11[2 * ig + 1] = d11 * tc;
+<                     a12[2 * ig] = d12 * ts;
+<                     a12[2 * ig + 1] = d12 * tc;
+<                     a13[2 * ig] = d13 * ts;
+<                     a13[2 * ig + 1] = d13 * tc;
+<                     a14[2 * ig] = d14 * ts;
+<                     a14[2 * ig + 1] = d14 * tc;
+<                     a15[2 * ig] = d15 * ts;
+<                     a15[2 * ig + 1] = d15 * tc;
+<                   }
+<                 }
+<               }
+<               else
+<               {
+<                 assert(false);
+<               } // l
+<               ipr += 2*l+1;
+<             } // while ipr
+< 
+<             // array anl_loc is complete
+< 
+<             // compute dfnl[npra][nstloc] = anl^T * c
+<             if ( basis_.real() )
+<             {
+<               // factor 2.0 in next line is: counting G, -G
+<               // Note: no need to correct for double counting of the
+<               // G=0 component which is always zero
+<               double two=2.0;
+<               char ct='t';
+<               const int twongwl = 2 * ngwl;
+<               const int nprnaloc = ia_block_size * npr[is];
+<               int lda = max(1,twongwl);
+<               int ldb = max(1,2*rsd.c().mloc());
+<               int ldc = max(1,nprnaloc);
+<               const complex<double>* c = rsd.c().cvalptr();
+<               dgemm(&ct,&cn,(int*)&nprnaloc,(int*)&nstloc,(int*)&twongwl,&two,
+<                     &anl_loc[0],&lda, (double*)c,&ldb,
+<                     &zero,&dfnl_loc[0],&ldc);
+<             }
+<             else
+<             {
+<               complex<double> cone=1.0;
+<               complex<double> czero=0.0;
+<               char cc='c';
+<               const int nprnaloc = ia_block_size * npr[is];
+<               int lda = max(1,ngwl);
+<               int ldb = max(1,rsd.c().mloc());
+<               int ldc = max(1,nprnaloc);
+<               const complex<double>* c = rsd.c().cvalptr();
+<               zgemm(&cc,&cn,(int*)&nprnaloc,(int*)&nstloc,(int*)&ngwl,&cone,
+<                     (complex<double>*)&anl_loc[0],&lda,
+<                     (complex<double>*)c,&ldb,
+<                     &czero,(complex<double>*)&dfnl_loc[0],&ldc);
+<             }
+< 
+<             // accumulate non-local contributions to sigma_ij
+<             if ( basis_.real() )
+<             {
+<               for ( int n = 0; n < nstloc; n++ )
+<               {
+<                 // Factor 2.0 in next line from derivative of |Fnl|^2
+<                 const double facn = 2.0 * occ[n + nbase];
+<                 for ( int ipra = 0; ipra < npr[is]*ia_block_size; ipra++ )
+<                 {
+<                   const int i = ipra + n * nprnaloc;
+<                   tsum[ij] += facn * fnl_loc[i] * dfnl_loc[i];
+<                 }
+<               }
+<             }
+<             else
+<             {
+<               for ( int n = 0; n < nstloc; n++ )
+<               {
+<                 // Factor 2.0 in next line from derivative of |Fnl|^2
+<                 const double facn = 2.0 * occ[n + nbase];
+<                 for ( int ipra = 0; ipra < npr[is]*ia_block_size; ipra++ )
+<                 {
+<                   const int i = ipra + n * nprnaloc;
+<                   double f_re = fnl_loc[2*i];
+<                   double f_im = fnl_loc[2*i+1];
+<                   double df_re = dfnl_loc[2*i];
+<                   double df_im = dfnl_loc[2*i+1];
+<                   tsum[ij] += facn * ( f_re * df_re + f_im * df_im );
+<                 }
+<               }
+<             }
+<           } // ij
+<           tmap["enl_sigma"].stop();
+<         } // compute_stress
+< 
+< ////////////////////////////////////////////////////////////////////////////////
+< // Developed by Dr. Min Choi and Prof. Bryan Wong in UCR
+<         if ( rtvp_ ) delete [] kpgx;
+< ////////////////////////////////////////////////////////////////////////////////
+<       } // ia_block
+< 
+<       if ( compute_forces )
+<       {
+<         ctxt_.dsum(3*na[is],1,&tmpfion[0],3*na[is]);
+<         for ( int ia = 0; ia < na[is]; ia++ )
+<         {
+<           fion_enl[is][3*ia+0] += tmpfion[3*ia];
+<           fion_enl[is][3*ia+1] += tmpfion[3*ia+1];
+<           fion_enl[is][3*ia+2] += tmpfion[3*ia+2];
+<         }
+<       }
+<     } // npr[is]>0
+<   } // is
+< 
+<   // reduction of enl across rows
+<   ctxt_.dsum('r',1,1,&enl,1);
+< 
+<   if ( compute_stress )
+<   {
+<     ctxt_.dsum(6,1,&tsum[0],6);
+<     sigma_enl[0] = ( enl + tsum[0] ) * omega_inv;
+<     sigma_enl[1] = ( enl + tsum[1] ) * omega_inv;
+<     sigma_enl[2] = ( enl + tsum[2] ) * omega_inv;
+<     sigma_enl[3] = + tsum[3] * omega_inv;
+<     sigma_enl[4] = + tsum[4] * omega_inv;
+<     sigma_enl[5] = + tsum[5] * omega_inv;
+<   }
+< 
+<   return enl;
+< }
+< 
+< ////////////////////////////////////////////////////////////////////////////////
+2593,2596d1321
+< ////////////////////////////////////////////////////////////////////////////////
+< // Developed by Dr. Min Choi and Prof. Bryan Wong in UCR
+<         if ( rtvp_ ) kpgx = vp_->get_kpgpax(basis_, 0);
+< ////////////////////////////////////////////////////////////////////////////////
+2916,2920c1641
+<             const double *kpgxj = basis_.kpgx_ptr(j);
+< ////////////////////////////////////////////////////////////////////////////////
+< // Developed by Dr. Min Choi and Prof. Bryan Wong in UCR
+<             if ( rtvp_ ) kpgxj = vp_->get_kpgpax(basis_, j);
+< ////////////////////////////////////////////////////////////////////////////////
+---
+>             const double *const kpgxj = basis_.kpgx_ptr(j);
+3060,3063d1780
+< ////////////////////////////////////////////////////////////////////////////////
+< // Developed by Dr. Min Choi and Prof. Bryan Wong in UCR
+<             if ( rtvp_ ) delete [] kpgxj;
+< ////////////////////////////////////////////////////////////////////////////////
+3322,3325d2038
+< ////////////////////////////////////////////////////////////////////////////////
+< // Developed by Dr. Min Choi and Prof. Bryan Wong in UCR
+<         if ( rtvp_ ) delete [] kpgx;
+< ////////////////////////////////////////////////////////////////////////////////

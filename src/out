@@ -1,0 +1,49 @@
+36:  kpoint_.resize(1);
+37:  kpoint_[0] = D3vector(0,0,0);
+48:ecut_(wf.ecut_), weight_(wf.weight_), kpoint_(wf.kpoint_)
+64:  // compute local number of kpoints nkp_loc_[ikpb]
+66:  const int nkp = kpoint_.size();
+77:  // round robin allocation of kpoints
+117:      sd_[isp_loc][ikp_loc] = new SlaterDet(sd_ctxt_,kpoint_[ikp]);
+136:int Wavefunction::nkp(void) const { return kpoint_.size(); }
+306:  // reset to single kpoint, ecut=0
+312:  kpoint_.resize(1);
+313:  kpoint_[0] = D3vector(0,0,0);
+410:void Wavefunction::add_kpoint(D3vector kpoint, double weight)
+412:  for ( int i = 0; i < kpoint_.size(); i++ )
+414:    if ( length(kpoint - kpoint_[i]) < 1.e-6 )
+417:        cout << " Wavefunction::add_kpoint: kpoint already defined"
+423:  kpoint_.push_back(kpoint);
+428:  const int ikp_new = kpoint_.size() - 1;
+433:    // new kpoint is local to the current block
+438:      sd_[isp_loc].push_back(new SlaterDet(sd_ctxt_,kpoint_[ikp_new]));
+473:void Wavefunction::del_kpoint(D3vector kpoint)
+476:  vector<D3vector>::iterator pk = kpoint_.begin();
+478:  while ( !found && pk != kpoint_.end() )
+480:    if ( length(kpoint - *pk) < 1.e-6 )
+493:      cout << " Wavefunction::del_kpoint: no such kpoint"
+498:  kpoint_.erase(pk);
+507:void Wavefunction::move_kpoint(D3vector kpoint, D3vector newkpoint)
+511:  while ( !found && ikp < kpoint_.size() )
+513:    if ( length(kpoint_[ikp] - kpoint) < 1.e-6 )
+525:      cout << " Wavefunction::move_kpoint: no such kpoint"
+529:  // check if new kpoint position coincides with existing kpoint
+530:  for ( int i = 0; i < kpoint_.size(); i++ )
+532:    if ( length(newkpoint - kpoint_[i]) < 1.e-6 )
+535:        cout << " Wavefunction::move_kpoint: kpoint already defined "
+536:             << "at kpoint new position"
+542:  // ikp: global index of kpoint to be moved
+545:  // copy wavefunctions from old SlaterDet at kpoint to new SlaterDet
+546:  // at newkpoint
+552:      // this task holds kpoint ikp
+554:      // create new SlaterDet at newkpoint
+556:      SlaterDet *sdn = new SlaterDet(sd->context(),newkpoint);
+577:        // if the new kpoint is Gamma, remove the phase of the wavefunction
+602:  kpoint_[ikp] = newkpoint;
+708:    // sum over spin and kpoints
+776:                 << "\" kpoint=\""
+778:                 << sd(isp_loc,ikp_loc)->kpoint()
+855:  // sum over kpoint and spin comms
+886:        // cout << " Hamiltonian at k = " << sd(ispin,ikp)->kpoint()
+925:        //      << sd(ispin,ikp)->kpoint() << endl;
+1167:  kpoint_ = wf.kpoint_;
