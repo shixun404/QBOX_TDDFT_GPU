@@ -39,6 +39,8 @@ extern "C" {
              double *scale, double *aux1, int *naux1,
              double *aux2, int *naux2);
 }
+#elif OPTIMIZE_GPU
+
 #else
 // no FFT library
 void cfft ( int idir, complex<double> *z1, complex<double> *z2, int n,
@@ -95,6 +97,8 @@ void sinft(int n, double *y)
   initflag = 0;
   dcft_(&initflag,&zin[0],&inc1,&inc2,&zout[0],&inc1,&inc2,&np,&ntrans,
         &isign,&scale,&aux1[0],&naux1,&aux2[0],&naux2);
+#elif OPTIMIZE_GPU
+
 #else
   // no FFT library
   int idir = 1, inzee = 1, np = 2*n;
@@ -158,6 +162,8 @@ void cosft1(int n, double *y)
   initflag = 0;
   dcft_(&initflag,&zin[0],&inc1,&inc2,&zout[0],&inc1,&inc2,&np,&ntrans,
         &isign,&scale,&aux1[0],&naux1,&aux2[0],&naux2);
+#elif OPTIMIZE_GPU
+
 #else
   // no FFT library
   int idir = 1, inzee = 1, np = 2*n;

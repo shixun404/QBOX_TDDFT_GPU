@@ -40,12 +40,25 @@ class BasisMapping
   std::vector<int> scounts, sdispl, rcounts, rdispl;
   mutable std::vector<std::complex<double> > sbuf, rbuf;
 
-  std::vector<int> ip_, im_;
+  std::vector<int> im_;
   std::vector<int> ipack_, iunpack_, zvec_to_val_;
 
+
+#if OPTIMIZE_GPU
+  int * ip_device;
+  int * ip_;
+#else
+  std::vector<int>  ip_;
+#endif
+  
   public:
   BasisMapping (const Basis &basis, int np0, int np1, int np2, int nstloc=1); 
-  
+ 
+#if OPTIMIZE_GPU
+ // BasisMapping (const Basis &basis, int np0, int np1, int np2, cudaStream_t stream);
+  ~BasisMapping();
+#endif
+   
   
   int np0(void) const { return np0_; }
   int np1(void) const { return np1_; }
@@ -57,6 +70,15 @@ class BasisMapping
   int np012loc(void) const { return np012loc_; }
   int nvec(void) const { return nvec_; }
   int zvec_size(void) const { return nvec_ * np2_; }
+
+
+#if OPTIMIZE_GPU
+  int allocate_device(cudaStream_t stream);
+  void device_vector_to_zvec(const double *c, double *zvec, cudaStream_t stream) const;
+  void device_transpose_bwd(const double *zvec, double * ct, cudaStream_t stream) const;
+#endif
+
+
 
   // map a function c(G) to zvec_
   void vector_to_zvec(const std::complex<double> *c,

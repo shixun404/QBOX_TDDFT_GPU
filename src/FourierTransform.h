@@ -22,7 +22,7 @@
 #include <complex>
 #include <vector>
 
-#if !( defined(USE_FFTW2) || defined(USE_FFTW3) || defined(USE_ESSL_FFT) || defined(FFT_NOLIB) )
+#if !( defined(OPTIMIZE_GPU) || defined(USE_FFTW2) || defined(USE_FFTW3) || defined(USE_ESSL_FFT) || defined(FFT_NOLIB) )
 #error "Must define USE_FFTW2, USE_FFTW3, USE_ESSL_FFT or FFT_NOLIB"
 #endif
 
@@ -45,6 +45,11 @@
 #endif
 #endif
 
+#if OPTIMIZE_GPU
+#include <cufft.h>
+#endif 
+//TODO: Review
+
 #include "Timer.h"
 #include "BasisMapping.h"
 
@@ -54,8 +59,23 @@ class FourierTransform
 {
   private:
 
-  const Basis& basis_;
+#if OPTIMIZE_GPU
+  static int my_dev;
+  static cudaStream_t* cuda_streams;
+  static const int nstreams =1;
+
+
+  cufftDoubleComplex *ptr_1;
+  cufftDoubleComplex *ptr_out;
+  double * c_device;
+  double * zvec_device;
+  double * f_device;
+  BasisMapping bm_; 
+#else
   const BasisMapping bm_;
+#endif	  
+
+  const Basis& basis_;
 
   const int np0_,np1_,np2_;
   const int nvec_;
@@ -71,7 +91,10 @@ class FourierTransform
   
   void init_lib(void);
 
-#if USE_ESSL_FFT
+#if OPTIMIZE_GPU
+  cufftHandle planFWD;
+  cufftHandle planBWD;
+#elif USE_ESSL_FFT
 #if USE_ESSL_2DFFT
   std::vector<double> aux1xyf,aux1zf;
   std::vector<double> aux1xyb,aux1zb;
@@ -96,7 +119,7 @@ class FourierTransform
 #elif defined(FFT_NOLIB)
   // no library
 #else
-#error "Must define USE_FFTW2, USE_FFTW3, USE_ESSL_FFT or FFT_NOLIB"
+#error "Must define USE_FFTW2, USE_FFTW3, USE_ESSL_FFT, OPTIMIZE_GPU or FFT_NOLIB"
 #endif
 
   void fxy(std::complex<double>* val);
@@ -106,7 +129,9 @@ class FourierTransform
   void fwd(std::complex<double>* val);
   void bwd(std::complex<double>* val);
 
-
+#if OPTIMIZE_GPU 
+  void cuda_do_fft3d( const int fsign, const int  *n, const double scale,  double *data, double* data2,cufftHandle &plan);
+#endif
 
   public:
   FourierTransform (const Basis &basis, int np0, int np1, int np2);

@@ -25,6 +25,12 @@
 #include <cassert>
 #include <cstring> // memset
 
+#if OPTIMIZE_GPU
+#include "cublas.h" //TODO: #include "cublas_v2.h"
+#include "device_basis_mapping.h"
+#include "my_cuda_utils.h"
+#endif
+
 #if OPTIMIZE_BRUCK
 #include "non_uniform_bruck.h"
 #endif
@@ -125,7 +131,16 @@ BasisMapping::BasisMapping (const Basis &basis, int np0, int np1, int np2, int n
   // compute index arrays ip_ and im_ for mapping vector->zvec
   if ( basis_.real() )
   {
+#if OPTIMIZE_GPU
+    /*cudaError_t cuErr;
+    cuErr= cudaHostAlloc((void**) &ip_, basis_.localsize()*sizeof(int),cudaHostAllocDefault);
+    pw_cuda_error_check(cuErr,__LINE__);
+ */
+    ip_=(int*)malloc(basis_.localsize()*sizeof(int));
+
+#else
     ip_.resize(basis_.localsize());
+#endif
     im_.resize(basis_.localsize());
 
     if ( myproc_ == 0 )
@@ -198,8 +213,16 @@ BasisMapping::BasisMapping (const Basis &basis, int np0, int np1, int np2, int n
     // basis is complex
     // compute index array ip_ for mapping vector->zvec
     // Note: im_ is not used
-    ip_.resize(basis_.localsize());
+#if OPTIMIZE_GPU
+    //cudaError_t cuErr;
+    //cuErr=cudaHostAlloc((void**) &ip_, basis_.localsize()*sizeof(int),cudaHostAllocDefault);
+    //pw_cuda_error_check(cuErr, __LINE__);
 
+    ip_=(int*)malloc(basis_.localsize()*sizeof(int));
+
+#else   
+    ip_.resize(basis_.localsize());
+#endif
     // map rods(h,k)
     // rod(h,k)   maps onto column irod*np2_ of zvec_, irod=0,..,nrods-1
     int ig = 0;
@@ -554,7 +577,100 @@ BasisMapping::BasisMapping (const Basis &basis, int np0, int np1, int np2, int n
     }
 #endif
   } // single task
+
+#if OPTIMIZE_GPU
+	ip_device=NULL;
+#endif
 }
+
+
+
+#if OPTIMIZE_GPU
+
+int BasisMapping::allocate_device( cudaStream_t stream){
+
+    if(ip_device)
+        return -1;
+    //cudaMallocHost TODO
+    cudaMalloc(reinterpret_cast<void**>(&ip_device),sizeof(int)*basis_.localsize());
+    cuda_check_last(__FILE__,__LINE__);
+    
+    cudaError_t cuErr=cudaMemcpy(ip_device, ip_, sizeof(int)*basis_.localsize(),cudaMemcpyHostToDevice);
+    //cudaError_t cuErr=cudaMemcpyAsync(ip_device, (int*) ip_.data(), sizeof(int)*basis_.localsize(),cudaMemcpyHostToDevice,stream);
+    cuda_check_last(__FILE__,__LINE__);
+    return 0;
+}
+
+BasisMapping::~BasisMapping()
+{
+	if(ip_device)
+        {
+                cudaFree(ip_device);
+
+                cuda_check_last(__FILE__,__LINE__);
+        }
+        free(ip_);
+
+}
+
+void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaStream_t stream) const
+{
+
+    cudaMemset(ct,0,np012loc_*2*sizeof(double));
+    cuda_check_last(__FILE__,__LINE__);
+
+    for ( int ivec = 0; ivec < nvec_; ivec++ )
+   {
+        int src = ivec*np2_;
+        int dest = zvec_to_val_[ivec];
+
+        int incx=1;
+        int incy=np0_*np1_;
+        int count= np2_;
+
+        cuDoubleComplex * x = (cuDoubleComplex *) (zvec + src*2);
+        cuDoubleComplex * y = (cuDoubleComplex *) (ct + dest*2);
+
+        cudaStreamSynchronize(stream); //TODO: Remove this when cuBLAS in non-default stream
+        cublasZcopy(count,x, incx, y, incy);
+   }
+
+
+
+}
+
+void BasisMapping::device_vector_to_zvec(const double *c,
+  double *zvec,cudaStream_t stream) const
+{
+  cudaMemset(zvec,0,nvec_*np2_*2*sizeof(double));
+  cuda_check_last(__FILE__,__LINE__);
+  const int ng = basis_.localsize();
+/*
+ // PENDING 
+ if ( basis_.real() )
+  {
+    
+    for ( int ig = 0; ig < ng; ig++ )
+    {
+      // zvec[ip_[ig]] = c[ig];
+      // zvec[im_[ig]] = conj(c[ig]);
+      const double a = pc[2*ig];
+      const double b = pc[2*ig+1];
+      const int ip = ip_[ig];
+      const int im = im_[ig];
+      pz[2*ip] = a;
+      pz[2*ip+1] = b;
+      pz[2*im] = a;
+      pz[2*im+1] = -b;
+    }
+  }
+  else*/
+
+  cuda_vector_to_zvec(c,zvec,ip_device,ng,stream);
+}
+
+#endif
+
 
 
 ////////////////////////////////////////////////////////////////////////////////
