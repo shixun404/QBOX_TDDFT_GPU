@@ -135,7 +135,6 @@ class FourierTransform
 
   public:
   FourierTransform (const Basis &basis, int np0, int np1, int np2);
- /*Code modified Dr. Adrian Perez*/
 #if OPTIMIZE_TRANSPOSE
   FourierTransform (const Basis &basis, int np0, int np1, int np2,int nstloc);
 #endif
