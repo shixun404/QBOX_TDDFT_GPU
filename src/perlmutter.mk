@@ -2,7 +2,7 @@
 #
 # module swap PrgEnv-gnu PrgEnv-nvhpc
 # module load cray-fftw cray-libsci
-#
+# nvcc -c device_basis_mapping.cu 
 #-------------------------------------------------------------------------------
 #
  PLT=Perlmutter

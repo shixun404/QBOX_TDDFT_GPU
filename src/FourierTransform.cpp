@@ -317,7 +317,9 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f)
  #if TIMING
   tm_map_bwd.start();
  #endif
-
+printf("ENTERING IN THE GPU ZONE\n");
+fflush(stdout);
+ 
 //cuda mem copy c vector from host to device
   cudaError_t cuErr;
   const double* const pc = (double*)c;
@@ -339,6 +341,9 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f)
    cuda_do_fft3d (1,n, 1.0, f_device, f_device, planBWD);
    cuErr = cudaMemcpy((double*) f,f_device, sizeof(double)* 2 * n[0] * n[1] * n[2], cudaMemcpyDeviceToHost);
    cuda_error_check(cuErr,__FILE__,__LINE__);
+printf("LEAVING THE GPU ZONE\n");
+fflush(stdout);
+    
 
 
 #else
@@ -1322,7 +1327,7 @@ void FourierTransform::init_lib(void)
         cuda_check_last(__FILE__,__LINE__);
 	cuda_streams = (cudaStream_t *) malloc(nstreams * sizeof(cudaStream_t));
         for (int i = 0; i < nstreams; i++) {
-                cErr2 = cudaStreamCreateWithFlags(&cuda_streams[0], cudaStreamNonBlocking);
+                cErr2 = cudaStreamCreateWithFlags(&cuda_streams[i], cudaStreamNonBlocking);
         	cuda_check_last(__FILE__,__LINE__);
 	}
   }

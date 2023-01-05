@@ -62,7 +62,7 @@ class FourierTransform
 #if OPTIMIZE_GPU
   static int my_dev;
   static cudaStream_t* cuda_streams;
-  static const int nstreams =1;
+  static const int nstreams =4; //THIS IS A PERFORMANCE PARAMETER
 
 
   cufftDoubleComplex *ptr_1;

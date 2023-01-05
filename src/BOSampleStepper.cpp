@@ -412,6 +412,10 @@ void BOSampleStepper::step(int niter)
     {
       tmap["charge"].start();
       cd_.update_density();
+//ADRIAN ADDED JUST FOR TESTING
+printf("Exiting in BOSampler line 416 \n");
+fflush(stdout);
+return;
       tmap["charge"].stop();
 
       tmap["update_vhxc"].start();
@@ -788,6 +792,10 @@ void BOSampleStepper::step(int niter)
         // It is always updated after the first step
         if ( ( update_density_first_ || itscf>0 ) )
           cd_.update_density();
+	//ADRIAN ADDED JUST FOR TESTING
+printf("Exiting in BOSampler line 796 \n");
+fflush(stdout);
+return;
         tmap["charge"].stop();
 
         if ( onpe0 )
@@ -1214,7 +1222,11 @@ void BOSampleStepper::step(int niter)
       {
         tmap["charge"].start();
         cd_.update_density();
-        tmap["charge"].stop();
+//ADRIAN ADDED JUST FOR TESTING
+printf("Exiting in BOSampler line 1226 \n");
+fflush(stdout);
+return;
+	tmap["charge"].stop();
 
         tmap["update_vhxc"].start();
         ef_.update_vhxc(compute_stress);
@@ -1282,6 +1294,10 @@ void BOSampleStepper::step(int niter)
       // evaluate and print energy
       tmap["charge"].start();
       cd_.update_density();
+      //ADRIAN ADDED JUST FOR TESTING
+printf("Exiting in BOSampler line 1298 \n");
+fflush(stdout);
+return;
       tmap["charge"].stop();
       tmap["update_vhxc"].start();
       ef_.update_vhxc(compute_stress);
@@ -1342,7 +1358,10 @@ void BOSampleStepper::step(int niter)
     tmap["charge"].start();
     cd_.update_density();
     tmap["charge"].stop();
-
+//ADRIAN ADDED JUST FOR TESTING
+printf("Exiting in BOSampler line 1362 \n");
+fflush(stdout);
+return;
     tmap["update_vhxc"].start();
     ef_.update_vhxc(compute_stress);
     tmap["update_vhxc"].stop();
@@ -1408,7 +1427,10 @@ void BOSampleStepper::step(int niter)
     tmap["charge"].start();
     cd_.update_density();
     tmap["charge"].stop();
-
+//ADRIAN ADDED JUST FOR TESTING
+printf("Exiting in BOSampler line 1430 \n");
+fflush(stdout);
+return;
     tmap["update_vhxc"].start();
     ef_.update_vhxc(compute_stress);
     tmap["update_vhxc"].stop();
