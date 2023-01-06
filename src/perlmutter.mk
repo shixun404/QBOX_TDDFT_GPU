@@ -2,7 +2,8 @@
 #
 # module swap PrgEnv-gnu PrgEnv-nvhpc
 # module load cray-fftw cray-libsci
-# nvcc -c device_basis_mapping.cu 
+# nvcc -c device_basis_mapping.cu
+# -DOPTIMIZE_GPU
 #-------------------------------------------------------------------------------
 #
  PLT=Perlmutter
@@ -20,7 +21,7 @@
  PLTFLAGS += $(OPT)  \
              -DOPTIMIZE_GPU -DUSE_MPI -DSCALAPACK -DADD_ \
              -DAPP_NO_THREADS -DXML_USE_NO_THREADS -DUSE_XERCES \
-             -DMPICH_IGNORE_CXX_SEEK -DPARALLEL_FS # -DUSE_FFTW3
+             -DMPICH_IGNORE_CXX_SEEK -DPARALLEL_FS  #-DUSE_FFTW3
 
  INCLUDE = -I$(XERCES)/include
 

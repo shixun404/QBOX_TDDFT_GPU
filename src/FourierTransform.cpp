@@ -325,8 +325,6 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f, cu
  #if TIMING
   tm_map_bwd.start();
  #endif
-printf("ENTERING IN THE GPU ZONE\n");
-fflush(stdout);
  
 //cuda mem copy c vector from host to device
   cudaError_t cuErr;
@@ -352,9 +350,17 @@ fflush(stdout);
    cuErr = cudaMemcpyAsync((double*)f, f_device,sizeof(double)*2* n[0] * n[1] * n[2], cudaMemcpyDeviceToHost,cuda_stream);
    cuda_error_check(cuErr,__FILE__,__LINE__);
 
-printf("LEAVING THE GPU ZONE\n");
+
+cudaStreamSynchronize(cuda_stream);   
+if(!MPIdata::rank())
+{
+	printf("[45] %lf [0] %ld [32] %ld \n",f[45],f[0],f[32]);
+	fflush(stdout);
+}
+
+printf("%d LEAVING THE GPU\n",MPIdata::rank());
 fflush(stdout);
-    
+exit(-1);    
 
 
 #else
@@ -367,6 +373,17 @@ fflush(stdout);
   tm_map_bwd.stop();
 #endif
   bwd(f);
+
+
+if(!MPIdata::rank())
+{
+        printf("[45] %lf [0] %ld [32] %ld \n",f[45],f[0],f[32]);
+        fflush(stdout);
+}
+
+printf("%d LEAVING THE GPU\n",MPIdata::rank());
+fflush(stdout);
+exit(-1);
 
 #endif
 
