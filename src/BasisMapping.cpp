@@ -26,9 +26,11 @@
 #include <cstring> // memset
 
 #if OPTIMIZE_GPU
-#include "cublas.h" //TODO: #include "cublas_v2.h"
+//#include "cublas.h" 
+#include "cublas_v2.h"
 #include "device_basis_mapping.h"
 #include "my_cuda_utils.h"
+#include "FourierTransform.h"
 #endif
 
 #if OPTIMIZE_BRUCK
@@ -591,6 +593,7 @@ int BasisMapping::allocate_device( cudaStream_t stream){
 
     if(ip_device)
         return -1;
+    
     //cudaMallocHost TODO
     cudaMalloc(reinterpret_cast<void**>(&ip_device),sizeof(int)*basis_.localsize());
     cuda_check_last(__FILE__,__LINE__);
@@ -598,6 +601,9 @@ int BasisMapping::allocate_device( cudaStream_t stream){
     cudaError_t cuErr=cudaMemcpy(ip_device, ip_, sizeof(int)*basis_.localsize(),cudaMemcpyHostToDevice);
     //cudaError_t cuErr=cudaMemcpyAsync(ip_device, (int*) ip_.data(), sizeof(int)*basis_.localsize(),cudaMemcpyHostToDevice,stream);
     cuda_check_last(__FILE__,__LINE__);
+    //We use the NULL stream for now; it is blocking with other streams, so this ensures that ip_device will be found in memory when the next CUDA calls will try to operate with it 
+    
+
     return 0;
 }
 
@@ -616,9 +622,14 @@ BasisMapping::~BasisMapping()
 void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaStream_t stream) const
 {
 
-    cudaMemset(ct,0,np012loc_*2*sizeof(double));
+    cudaMemset(ct,0,np012loc_*2*sizeof(double)); //TODO: CudaMemsetAsync
     cuda_check_last(__FILE__,__LINE__);
-
+    cublasStatus_t stat = cublasSetStream(FourierTransform::get_cublasHandle(), stream); //TODO: Ensure it is passed by reference?
+    if (stat!=cudaSuccess){
+    	printf("Failed to assign stream to handle - CUBLAS\n");
+	fflush(stdout);
+	exit(-1); // TODO: Launch exception better
+    }
     for ( int ivec = 0; ivec < nvec_; ivec++ )
    {
         int src = ivec*np2_;
@@ -631,8 +642,9 @@ void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaSt
         cuDoubleComplex * x = (cuDoubleComplex *) (zvec + src*2);
         cuDoubleComplex * y = (cuDoubleComplex *) (ct + dest*2);
 
-        cudaStreamSynchronize(stream); //TODO: Remove this when cuBLAS in non-default stream
-        cublasZcopy(count,x, incx, y, incy);
+        //cudaStreamSynchronize(stream); // Remove this when cuBLAS works with the  non-default stream
+   	
+   	cublasZcopy(FourierTransform::get_cublasHandle(), count,x, incx, y, incy);
    }
 
 

@@ -415,7 +415,7 @@ void BOSampleStepper::step(int niter)
 //ADRIAN ADDED JUST FOR TESTING
 printf("Exiting in BOSampler line 416 \n");
 fflush(stdout);
-return;
+exit(-1);
       tmap["charge"].stop();
 
       tmap["update_vhxc"].start();
@@ -795,7 +795,7 @@ return;
 	//ADRIAN ADDED JUST FOR TESTING
 printf("Exiting in BOSampler line 796 \n");
 fflush(stdout);
-return;
+exit(-1);
         tmap["charge"].stop();
 
         if ( onpe0 )
@@ -1225,7 +1225,7 @@ return;
 //ADRIAN ADDED JUST FOR TESTING
 printf("Exiting in BOSampler line 1226 \n");
 fflush(stdout);
-return;
+exit(-1);
 	tmap["charge"].stop();
 
         tmap["update_vhxc"].start();
@@ -1297,7 +1297,7 @@ return;
       //ADRIAN ADDED JUST FOR TESTING
 printf("Exiting in BOSampler line 1298 \n");
 fflush(stdout);
-return;
+exit(-1);
       tmap["charge"].stop();
       tmap["update_vhxc"].start();
       ef_.update_vhxc(compute_stress);
@@ -1361,7 +1361,7 @@ return;
 //ADRIAN ADDED JUST FOR TESTING
 printf("Exiting in BOSampler line 1362 \n");
 fflush(stdout);
-return;
+exit(-1);
     tmap["update_vhxc"].start();
     ef_.update_vhxc(compute_stress);
     tmap["update_vhxc"].stop();
@@ -1430,7 +1430,7 @@ return;
 //ADRIAN ADDED JUST FOR TESTING
 printf("Exiting in BOSampler line 1430 \n");
 fflush(stdout);
-return;
+exit(-1);
     tmap["update_vhxc"].start();
     ef_.update_vhxc(compute_stress);
     tmap["update_vhxc"].stop();

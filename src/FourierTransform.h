@@ -47,6 +47,7 @@
 
 #if OPTIMIZE_GPU
 #include <cufft.h>
+#include "cublas_v2.h"
 #endif 
 //TODO: Review
 
@@ -63,7 +64,7 @@ class FourierTransform
   static int my_dev;
   static cudaStream_t* cuda_streams;
   static const int nstreams =4; //THIS IS A PERFORMANCE PARAMETER
-
+  static cublasHandle_t handle;
 
   cufftDoubleComplex *ptr_1;
   cufftDoubleComplex *ptr_out;
@@ -130,7 +131,7 @@ class FourierTransform
   void bwd(std::complex<double>* val);
 
 #if OPTIMIZE_GPU 
-  void cuda_do_fft3d( const int fsign, const int  *n, const double scale,  double *data, double* data2,cufftHandle &plan);
+  void cuda_do_fft3d( const int fsign, const int  *n, const double scale,  double *data, double* data2,cufftHandle &plan, cudaStream_t cuda_stream);
 #endif
 
   public:
@@ -141,11 +142,26 @@ class FourierTransform
   /* END*/
   ~FourierTransform ();
 
+  
+  #if OPTIMIZE_GPU 
+  static cudaStream_t& get_cuda_streams(int i){return cuda_streams[i];}
+  static int get_nstreams(){return nstreams;}
+  static cublasHandle_t & get_cublasHandle(){return handle;}
+  #endif 
+  
+  
+  
   // backward: Fourier synthesis, compute real-space function
   // forward:  Fourier analysis, compute Fourier coefficients
   // forward transform includes scaling by 1/np012
   // single transforms: c -> f, f -> c
-  void backward (const std::complex<double>* c, std::complex<double>* f);
+  
+  
+  
+  
+  void backward (const std::complex<double>* c, std::complex<double>* f, cudaStream_t cuda_stream=0);
+  //void backward (const std::complex<double>* c, std::complex<double>* f);
+ 
 #if OPTIMIZE_TRANSPOSE
   bool get_optimization() const {return optimization_;}
   void backward1 (const std::complex<double>* c, int band=-1);

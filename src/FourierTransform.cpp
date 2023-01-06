@@ -37,7 +37,7 @@
 
 #if OPTIMIZE_GPU 
 #include "cufft.h"
-#include "cublas.h" //TODO: #include "cublas_v2.h"
+//#include "cublas.h"
 #include "my_cuda_utils.h"
 #endif
 
@@ -154,12 +154,14 @@ void fftcu_plan3d_z(      cufftHandle  &plan,
 void FourierTransform::cuda_do_fft3d( const int                 fsign,
                                 const int                *n,
                                 const double              scale,
-                                      double *data, double* data2,cufftHandle & plan){
+                                      double *data, double* data2,cufftHandle & plan, cudaStream_t cuda_stream){
 
   int ioverflow, lmem;
   cufftResult_t cErr;
   cudaError_t  cuErr;
 
+  cErr=cufftSetStream(plan, cuda_stream);
+  cufft_error_check(cErr,__LINE__);
 
   lmem = n[0] * n[1] * n[2];
 
@@ -176,13 +178,19 @@ void FourierTransform::cuda_do_fft3d( const int                 fsign,
   if (scale != 1.0e0) {
   //  cuErr = cudaStreamSynchronize(cuda_streams[0]); //TODO: Remove when CUBLAS in non-default stream
   //  cuda_error_check(cuErr,__FILE__, __LINE__);
-      cublasDscal(2*lmem, scale, (double *) data2, 1);
+      cublasStatus_t stat = cublasSetStream(FourierTransform::get_cublasHandle(), cuda_stream); //TODO: Ensure it is passed by reference?
+      if (stat!=cudaSuccess){
+        	printf("Failed to assign stream to handle - CUBLAS\n");
+        	fflush(stdout);
+       		exit(-1); // TODO: Launch exception better
+      }    
+      cublasDscal(handle,2*lmem, &scale, (double *) data2, 1);
   }
 
 
 }
 
-
+cublasHandle_t FourierTransform::handle;
 
 #endif
 
@@ -310,7 +318,7 @@ void FourierTransform::forward(complex<double>* f, complex<double>* c)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void FourierTransform::backward(const complex<double>* c, complex<double>* f)
+void FourierTransform::backward(const complex<double>* c, complex<double>* f, cudaStream_t cuda_stream)
 {
 
 #if OPTIMIZE_GPU
@@ -323,24 +331,27 @@ fflush(stdout);
 //cuda mem copy c vector from host to device
   cudaError_t cuErr;
   const double* const pc = (double*)c;
-  cuErr=cudaMemcpy(c_device,pc,sizeof(double)*2*basis_.localsize(),cudaMemcpyHostToDevice);
-  // cuErr=cudaMemcpyAsync(c_device,pc, sizeof(double)*2*basis_.localsize(),cudaMemcpyHostToDevice,cuda_streams[0]);
+  //cuErr=cudaMemcpy(c_device,pc,sizeof(double)*2*basis_.localsize(),cudaMemcpyHostToDevice);
+  cuErr=cudaMemcpyAsync(c_device,pc, sizeof(double)*2*basis_.localsize(),cudaMemcpyHostToDevice,cuda_stream);
   cuda_error_check(cuErr, __FILE__,__LINE__);
 
 // pass the c device version to bm and the f vector (which is gpu vector)
-  bm_.device_vector_to_zvec(c_device,zvec_device,cuda_streams[0]);
+  bm_.device_vector_to_zvec(c_device,zvec_device,cuda_stream);
 
 #if TIMING
   tm_map_bwd.stop();
 #endif
 
-   bm_.device_transpose_bwd(zvec_device,f_device, cuda_streams[0]);
+   bm_.device_transpose_bwd(zvec_device,f_device, cuda_stream);
 
    int n[3];
    n[0]=np2_loc(); n[1]=np1_; n[2]=np0_;
-   cuda_do_fft3d (1,n, 1.0, f_device, f_device, planBWD);
-   cuErr = cudaMemcpy((double*) f,f_device, sizeof(double)* 2 * n[0] * n[1] * n[2], cudaMemcpyDeviceToHost);
+   cuda_do_fft3d (1,n, 1.0, f_device, f_device, planBWD,cuda_stream);
+
+ //  cuErr = cudaMemcpy((double*) f,f_device, sizeof(double)* 2 * n[0] * n[1] * n[2], cudaMemcpyDeviceToHost);
+   cuErr = cudaMemcpyAsync((double*)f, f_device,sizeof(double)*2* n[0] * n[1] * n[2], cudaMemcpyDeviceToHost,cuda_stream);
    cuda_error_check(cuErr,__FILE__,__LINE__);
+
 printf("LEAVING THE GPU ZONE\n");
 fflush(stdout);
     
@@ -1330,6 +1341,14 @@ void FourierTransform::init_lib(void)
                 cErr2 = cudaStreamCreateWithFlags(&cuda_streams[i], cudaStreamNonBlocking);
         	cuda_check_last(__FILE__,__LINE__);
 	}
+
+	cublasStatus_t stat = cublasCreate(&handle); 
+    	if(stat!= CUBLAS_STATUS_SUCCESS){
+        	printf("CUBLAS initialization failed\n");
+        	fflush(stdout);
+        	exit(-1);
+    	}  
+
   }
 
   const int lmem = np0_ * np1_ * np2_;
@@ -1351,7 +1370,7 @@ void FourierTransform::init_lib(void)
          return;
   }
 
-  bm_.allocate_device(cuda_streams[0]);
+  bm_.allocate_device(0);
  
 
 #endif

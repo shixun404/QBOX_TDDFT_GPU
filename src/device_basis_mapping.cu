@@ -36,7 +36,7 @@ void cuda_vector_to_zvec (const double *c,
 
         dim3 threads (THREADS_PER_BLOCK);
         dim3 blocks (block_num);
-        vector_to_zvec_kernel<UNROLL_FACTOR><<<blocks,threads/*,0,stream*/>>>(c,zvec,ip_,ng);
+        vector_to_zvec_kernel<UNROLL_FACTOR><<<blocks,threads,0,stream>>>(c,zvec,ip_,ng);
 	if (cudaGetLastError() != cudaSuccess){
                    fprintf(stderr, "Cuda error device_bm: Failed kernel\n");
                    exit(-1);

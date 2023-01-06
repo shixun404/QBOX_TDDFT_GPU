@@ -323,9 +323,14 @@ void SlaterDet::compute_density(FourierTransform& ft,
       const double fac = weight * omega_inv * occ_[nn];
 
       if ( fac > 0.0 )
-      {    
+      {   
+	#if OPTIMIZE_GPU
+	int nstreams=FourierTransform::get_nstreams();      
+	ft.backward(c_.cvalptr(n*c_.mloc()),&tmp[0], FourierTransform::get_cuda_streams(n%nstreams));
+	#else 
         ft.backward(c_.cvalptr(n*c_.mloc()),&tmp[0]);
-        for ( int i = 0; i < np012loc; i++ )
+	#endif
+	for ( int i = 0; i < np012loc; i++ )
           rho[i] += fac * norm(tmp[i]);
       }    
     }    
@@ -533,7 +538,12 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
   if(execute){
     for ( int n = 0; n < nstloc(); n++ )
     {
-      ft.backward(c_.cvalptr(n*mloc),&tmp[0]);
+      #if OPTIMIZE_GPU
+        int nstreams=FourierTransform::get_nstreams();     
+        ft.backward(c_.cvalptr(n*mloc),&tmp[0], FourierTransform::get_cuda_streams(n%nstreams));
+      #else 
+        ft.backward(c_.cvalptr(n*mloc),&tmp[0]);
+      #endif	    
 
       #pragma omp parallel for
       for ( int i = 0; i < np012loc; i++ )
