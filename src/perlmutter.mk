@@ -27,9 +27,9 @@
 
  CXXFLAGS= -D$(PLT) $(INCLUDE) $(PLTFLAGS) $(DFLAGS)
 
- LIBPATH = -L$(XERCES)/lib
+ LIBPATH = -L$(XERCES)/lib64
 
-LIBS =  -lfftw3_threads -lfftw3_omp -lfftw3 -lxerces-c -L/opt/nvidia/hpc_sdk/Linux_x86_64/21.11/math_libs/lib64 -L/opt/nvidia/hpc_sdk/Linux_x86_64/21.11/cuda/lib64 -lcudart -lcufft -lcublas
+LIBS = -lfftw3_threads -lfftw3_omp -lfftw3 -lxerces-c -L/opt/nvidia/hpc_sdk/Linux_x86_64/22.7/math_libs/lib64 -L/opt/nvidia/hpc_sdk/Linux_x86_64/22.7/cuda/lib64 -lcudart -lcufft -lcublas
 
  LDFLAGS = $(LIBPATH) $(LIBS) -fopenmp -cudalib=cublas,cufft -cuda
                                                                                                                 

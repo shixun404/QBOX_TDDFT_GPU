@@ -360,6 +360,7 @@ if(!MPIdata::rank())
 
 printf("%d LEAVING THE GPU\n",MPIdata::rank());
 fflush(stdout);
+
 exit(-1);    
 
 
@@ -1367,7 +1368,6 @@ void FourierTransform::init_lib(void)
     	}  
 
   }
-
   const int lmem = np0_ * np1_ * np2_;
   int ioverflow;
   int ns[3];
@@ -1388,7 +1388,6 @@ void FourierTransform::init_lib(void)
   }
 
   bm_.allocate_device(0);
- 
 
 #endif
 

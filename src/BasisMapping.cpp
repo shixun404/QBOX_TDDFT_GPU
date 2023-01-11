@@ -657,7 +657,8 @@ void BasisMapping::device_vector_to_zvec(const double *c,
   cudaMemset(zvec,0,nvec_*np2_*2*sizeof(double));
   cuda_check_last(__FILE__,__LINE__);
   const int ng = basis_.localsize();
-/*
+
+  /*
  // PENDING 
  if ( basis_.real() )
   {

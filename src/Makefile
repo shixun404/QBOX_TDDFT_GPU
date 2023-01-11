@@ -25,7 +25,7 @@ testjacobi testjade
 
 RTOBJECTS= RTCurrentDensity.o RTDeltaKickStepper.o RTCNWavefunctionStepper.o \
 	   RTPTCNWavefunctionStepper.o RTVectorPotential.o RTPosition.o RTProjection.o \
-	   RTSampleStepper.o RTTDCmd.o twophase_bruck.o my_cuda_utils.o device_basis_mapping.o
+	   RTSampleStepper.o RTTDCmd.o twophase_bruck.o my_cuda_utils.o device_basis_mapping.o 
 
 OBJECTS=MPIdata.o qb.o AtomSet.o Atom.o Species.o \
         Wavefunction.o SlaterDet.o \
