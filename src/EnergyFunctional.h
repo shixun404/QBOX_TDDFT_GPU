@@ -82,6 +82,14 @@ class EnergyFunctional
   NonLocalPotential* nlpout(int isp_loc, int ikp_loc) { return nlp[isp_loc][ikp_loc]; }
 
   std::vector<std::vector<double> > v_r;
+  #if OPTIMIZE_GPU
+  	double * v_0_device;
+        double * v_1_device;
+	bool v_empty;
+	bool gpu_;	
+  #endif
+
+
   std::vector<std::vector<double> > vxc_r;
   mutable TimerMap tmap;
   bool rtvp;
@@ -135,8 +143,8 @@ class EnergyFunctional
 
   void print(std::ostream& os) const;
 
-  EnergyFunctional(Sample& s, ChargeDensity& cd);
-  EnergyFunctional(Sample& s, Wavefunction& wf, ChargeDensity& cd);
+  EnergyFunctional(Sample& s, ChargeDensity& cd,bool gpu=true);
+  EnergyFunctional(Sample& s, Wavefunction& wf, ChargeDensity& cd, bool gpu=true);
   ~EnergyFunctional();
 };
 std::ostream& operator << ( std::ostream& os, const EnergyFunctional& e );

@@ -23,6 +23,12 @@
 
 #include "Context.h"
 
+#ifdef NMALLOC_HOST_GPU
+#include "MPIdata.h"
+#include "my_cuda_utils.h"
+#endif
+
+
 #include <valarray>
 #include <complex>
 #include <cstring> // memcpy
@@ -412,8 +418,16 @@ class ComplexMatrix
       const int old_size = size_;
       init_size(m,n,mb,nb);
       if ( size_ == old_size ) return;
+      #if NMALLOC_HOST_GPU
+      if(val!=NULL)
+      	cudaFreeHost(val);
+      cudaMallocHost(reinterpret_cast<void**>(&val),size_*sizeof(std::complex<double>));
+      cuda_check_last(__FILE__,__LINE__);
+      #else
       delete[] val;
       val = new std::complex<double>[size_];
+      #endif
+      
       clear();
     }
 
@@ -437,7 +451,13 @@ class ComplexMatrix
       reference_(false)
     {
       init_size(rhs.m(),rhs.n(),rhs.mb(),rhs.nb());
+      #if NMALLOC_HOST_GPU
+      if(!size_)
+      	cudaMallocHost(reinterpret_cast<void**>(&val),size_*sizeof(std::complex<double>));
+      cuda_check_last(__FILE__,__LINE__);
+      #else
       val = new std::complex<double>[size_];
+      #endif
       memcpy(val, rhs.val, size_*sizeof(std::complex<double>));
     }
 
@@ -447,7 +467,15 @@ class ComplexMatrix
 
     ~ComplexMatrix(void)
     {
-      if ( !reference_ ) delete[] val;
+      if ( !reference_ ){ 
+#if NMALLOC_HOST_GPU
+	if(val!=NULL)
+	      cudaFreeHost(val);
+	cuda_check_last(__FILE__,__LINE__);
+#else
+      	delete[] val;
+#endif
+      }
     }
 
     ComplexMatrix& operator=(const ComplexMatrix& a);

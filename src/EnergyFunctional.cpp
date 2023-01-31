@@ -16,6 +16,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+#include "my_cuda_utils.h"
 #include "MPIdata.h"
 #include "EnergyFunctional.h"
 #include "Sample.h"
@@ -45,7 +46,7 @@
 using namespace std;
 
 ////////////////////////////////////////////////////////////////////////////////
-EnergyFunctional::EnergyFunctional(Sample& s, ChargeDensity& cd)
+EnergyFunctional::EnergyFunctional(Sample& s, ChargeDensity& cd, bool gpu)
  : s_(s), cd_(cd), wf_(s_.wf)
 {
   const AtomSet& atoms = s_.atoms;
@@ -77,6 +78,27 @@ EnergyFunctional::EnergyFunctional(Sample& s, ChargeDensity& cd)
     v_r[ispin].resize(vft->np012loc());
     vxc_r[ispin].resize(vft->np012loc());
   }
+
+#if OPTIMIZE_GPU
+  if (gpu)
+  {
+	gpu_=true;
+        cudaMalloc(reinterpret_cast<void**>(&v_0_device), sizeof(double)*vft->np012loc());
+	if (wf.nspin()>1)
+		cudaMalloc(reinterpret_cast<void**>(&v_1_device),sizeof(double)*vft->np012loc());
+	if (cudaGetLastError() != cudaSuccess){
+         fprintf(stderr, "Cuda error: Failed to allocate\n");
+         return;
+  	}
+
+	v_empty=true;
+  }
+  else{
+  	gpu_=false;
+  }
+#endif
+
+
   tmp_r.resize(vft->np012loc());
 
   if ( MPIdata::onpe0() )
@@ -201,7 +223,7 @@ EnergyFunctional::EnergyFunctional(Sample& s, ChargeDensity& cd)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-EnergyFunctional::EnergyFunctional(Sample& s, Wavefunction& wf, ChargeDensity& cd)
+EnergyFunctional::EnergyFunctional(Sample& s, Wavefunction& wf, ChargeDensity& cd, bool gpu)
  : s_(s), cd_(cd), wf_(wf)
 {
   const AtomSet& atoms = s_.atoms;
@@ -232,6 +254,25 @@ EnergyFunctional::EnergyFunctional(Sample& s, Wavefunction& wf, ChargeDensity& c
     v_r[ispin].resize(vft->np012loc());
     vxc_r[ispin].resize(vft->np012loc());
   }
+ 
+  #if OPTIMIZE_GPU
+  if (gpu)
+  {
+        gpu_=true;
+        cudaMalloc(reinterpret_cast<void**>(&v_0_device), sizeof(double)*vft->np012loc());
+        if (wf.nspin()>1)
+                cudaMalloc(reinterpret_cast<void**>(&v_1_device),sizeof(double)*vft->np012loc());
+        if (cudaGetLastError() != cudaSuccess){
+         fprintf(stderr, "Cuda error: Failed to allocate\n");
+         return;
+        }    
+
+        v_empty=true;
+  }
+  else{
+        gpu_=false;
+  }
+  #endif 
   tmp_r.resize(vft->np012loc());
 
   if ( MPIdata::onpe0() )
@@ -366,6 +407,18 @@ EnergyFunctional::~EnergyFunctional(void)
   delete xco;
   delete vp;
 
+  #if OPTIMIZE_GPU
+        if(gpu_){
+                cudaFree(v_0_device);
+                if (wf_.nspin()>1)
+                        cudaFree(v_1_device);
+                if (cudaGetLastError() != cudaSuccess){
+                        fprintf(stderr, "Cuda error: Failed to allocate\n");
+                        return;
+                }
+        }
+  #endif
+
   if ( wf_.nsp_loc() != 0 )
     for ( int ikp_loc = 0; ikp_loc < wf_.nkp_loc(); ++ikp_loc )
       delete cfp[ikp_loc];
@@ -389,6 +442,7 @@ EnergyFunctional::~EnergyFunctional(void)
            << endl;
     }
   }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -541,6 +595,15 @@ void EnergyFunctional::update_vhxc(bool compute_stress, bool update_vh,
     {
       v_r[0][i] = vxc_r[0][i] + real(tmp_r[i]);
     }
+
+  #if OPTIMIZE_GPU
+    	if(gpu_){
+		const double* const pc =(double*) v_r[0].data();
+		cudaError_t cuErr= cudaMemcpy(v_0_device,pc,sizeof(double)*size, cudaMemcpyHostToDevice);
+		cuda_error_check(cuErr,__FILE__,__LINE__);
+		v_empty=false;
+	}
+  #endif
   }
   else
   {
@@ -550,6 +613,18 @@ void EnergyFunctional::update_vhxc(bool compute_stress, bool update_vh,
       v_r[0][i] = vxc_r[0][i] + vloc;
       v_r[1][i] = vxc_r[1][i] + vloc;
     }
+      #if OPTIMIZE_GPU
+        if(gpu_){
+                const double* const pc =(double*) v_r[0].data();
+                const double* const pc1=(double*) v_r[1].data();
+	       	cudaError_t cuErr= cudaMemcpy(v_0_device,pc,sizeof(double)*size, cudaMemcpyHostToDevice);
+                cuErr=cudaMemcpy(v_1_device,pc1,sizeof(double)*size, cudaMemcpyHostToDevice);
+		cuda_error_check(cuErr,__FILE__,__LINE__);
+                v_empty=false;
+        }    
+  #endif 
+
+
   }
 
   if ( el_enth_ )
@@ -616,7 +691,24 @@ void EnergyFunctional::hpsi(int isp_loc, int ikp_loc, Wavefunction& psi, Wavefun
 
   // local potential
   const int ispg = wf_.isp_global(isp_loc);
-  sd.rs_mul_add(*ft[ikp_loc], &v_r[ispg][0], sdp);
+  bool exec=true;
+#if OPTIMIZE_GPU
+  if(gpu_){
+	if (v_empty){
+		printf("Error in EnergyFunctional: Trying to call SlaterDet::rs_mul_add with an empty device pointer\n");
+	       fflush(stdout);
+       	       exit(-1);	       
+	}
+	if(!ispg)
+		sd.rs_mul_add(*ft[ikp_loc], v_0_device,sdp,gpu_);
+	else
+		sd.rs_mul_add(*ft[ikp_loc], v_1_device,sdp,gpu_);
+
+  	exec=false;
+  }
+#endif
+  if(exec)
+  	sd.rs_mul_add(*ft[ikp_loc], &v_r[ispg][0], sdp);
   
   
   if ( rtvp ) delete [] kpg2;
@@ -1086,7 +1178,26 @@ double EnergyFunctional::energy(Wavefunction& rwf, bool compute_hpsi, Wavefuncti
 
         // local potential
         const int ispg = wf_.isp_global(isp_loc);
+
+	  bool exec=true;
+#if OPTIMIZE_GPU
+  if(gpu_){
+        if (v_empty){
+                printf("Error in EnergyFunctional: Trying to call SlaterDet::rs_mul_add with an empty device pointer\n");
+               fflush(stdout);
+               exit(-1);
+        }
+        if(!ispg)
+                sd.rs_mul_add(*ft[ikp_loc], v_0_device,sdp,gpu_);
+        else
+                sd.rs_mul_add(*ft[ikp_loc], v_1_device,sdp,gpu_);
+
+        exec=false;
+  }
+#endif
+  if(exec)
         sd.rs_mul_add(*ft[ikp_loc], &v_r[ispg][0], sdp);
+
 ////////////////////////////////////////////////////////////////////////////////
 // Developed by Dr. Min Choi and Prof. Bryan Wong in UCR
         if ( rtvp ) delete [] kpg2;
@@ -1763,7 +1874,24 @@ double EnergyFunctional::energy(bool compute_hpsi, Wavefunction& dwf,
 
         // local potential
         const int ispg = wf_.isp_global(isp_loc);
-        sd.rs_mul_add(*ft[ikp_loc], &v_r[ispg][0], sdp);
+         bool exec=true;
+#if OPTIMIZE_GPU
+  if(gpu_){
+        if (v_empty){
+                printf("Error in EnergyFunctional: Trying to call SlaterDet::rs_mul_add with an empty device pointer\n");
+               fflush(stdout);
+               exit(-1);     
+        }    
+        if(!ispg)
+                sd.rs_mul_add(*ft[ikp_loc], v_0_device,sdp,gpu_);
+        else 
+                sd.rs_mul_add(*ft[ikp_loc], v_1_device,sdp,gpu_);
+
+        exec=false;
+  }
+#endif
+  if(exec)
+       	sd.rs_mul_add(*ft[ikp_loc], &v_r[ispg][0], sdp);
 ////////////////////////////////////////////////////////////////////////////////
 // Developed by Dr. Min Choi and Prof. Bryan Wong in UCR
         if ( rtvp ) delete [] kpg2;

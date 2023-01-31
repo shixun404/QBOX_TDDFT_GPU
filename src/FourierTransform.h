@@ -71,7 +71,9 @@ class FourierTransform
   double * c_device;
   double * zvec_device;
   double * f_device;
-  BasisMapping bm_; 
+  BasisMapping bm_;
+
+  
 #else
   const BasisMapping bm_;
 #endif	  
@@ -146,7 +148,12 @@ class FourierTransform
   #if OPTIMIZE_GPU 
   static cudaStream_t& get_cuda_streams(int i){return cuda_streams[i];}
   static int get_nstreams(){return nstreams;}
+  //CUBLAS IMPLEMENTATION
   static cublasHandle_t & get_cublasHandle(){return handle;}
+  
+  
+  double* get_f_device() {return f_device;}
+  double* get_c_device(){return c_device;} 
   #endif 
   
   
@@ -159,7 +166,7 @@ class FourierTransform
   
   
   
-  void backward (const std::complex<double>* c, std::complex<double>* f, cudaStream_t cuda_stream=0);
+  void backward (const std::complex<double>* c, std::complex<double>* f, cudaStream_t cuda_stream=0, bool enable_htod = true, bool enable_dtoh = true,bool gpu=false);
   //void backward (const std::complex<double>* c, std::complex<double>* f);
  
 #if OPTIMIZE_TRANSPOSE
@@ -176,7 +183,7 @@ class FourierTransform
 
 
   // Note: forward transforms overwrite the array f
-  void forward(std::complex<double>* f, std::complex<double>* c);
+  void forward(std::complex<double>* f, std::complex<double>* c, cudaStream_t cuda_stream=0, bool enable_htod = true, bool enable_dtoh = true, bool gpu = false);
 
   // double transforms: c1 + i*c2 -> f, f -> c1 + i*c2
   void backward (const std::complex<double>* c1,

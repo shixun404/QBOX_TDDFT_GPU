@@ -133,7 +133,11 @@ void RTCNWavefunctionStepper::update(Wavefunction& rt_wf_next)
   tmap_["charge"].stop();
 
   // efupd = H(t+dt)
+#if OPTIMIZE_GPU
+  EnergyFunctional efupd(s_, xwf2, cdupd, true);
+#else
   EnergyFunctional efupd(s_, xwf2, cdupd);
+#endif  
   if ( s_.rtctrl.rt_vp == "ON" )
     efupd.vp->vp_propagate(iter_, rtdt_);
   tmap_["update_vhxc"].start();

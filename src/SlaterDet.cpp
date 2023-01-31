@@ -23,6 +23,10 @@
 #include "Base64Transcoder.h"
 #include "Timer.h"
 #include "MPIdata.h"
+#if OPTIMIZE_GPU
+#include "my_cuda_utils.h"
+#include "device_basis_mapping.h"
+#endif
 
 #include <cstdlib>
 #include <cstring> // memcpy
@@ -449,15 +453,26 @@ void SlaterDet::compute_tau(FourierTransform& ft,
 
 ////////////////////////////////////////////////////////////////////////////////
 void SlaterDet::rs_mul_add(FourierTransform& ft,
-  const double* v, SlaterDet& sdp) const
+  const double* v, SlaterDet& sdp, bool gpu) const
 {
   // transform states to real space, multiply states by v[r] in real space
   // transform back to reciprocal space and add to sdp
   // sdp[n] += v * sd[n]
 
-  vector<complex<double> > tmp(ft.np012loc());
-  vector<complex<double> > ctmp(2*c_.mloc());
 
+  complex<double> * ctmp, *tmp;
+  #if OPTIMIZE_GPU
+  //TODO: Check if mloc()/np012loc changes across invocations. Otherwise, allocate in constructor only once.
+  int nstreams=FourierTransform::get_nstreams();
+
+  cudaMallocHost(reinterpret_cast<void**>(&ctmp), 2*c_.mloc()*sizeof(complex<double>));
+  cuda_check_last(__FILE__,__LINE__);  
+  //cudaMallocHost(reinterpret_cast<void**>(&tmp), ft.np012loc()*sizeof(complex<double>));
+  //cuda_check_last(__FILE__,__LINE__);
+  #else
+  	vector<complex<double> > tmp(ft.np012loc());
+  	vector<complex<double> > ctmp(2*c_.mloc());
+  #endif
   const int np012loc = ft.np012loc();
   const int mloc = c_.mloc();
   double* dcp = (double*) sdp.c().valptr();
@@ -536,25 +551,54 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
  
 #endif
   if(execute){
-    for ( int n = 0; n < nstloc(); n++ )
+    printf("%d Entrando Slater\n",MPIdata::rank());
+    fflush(stdout);
+    for ( int n = 0; n <  nstloc(); n++ )
     {
       #if OPTIMIZE_GPU
-        int nstreams=FourierTransform::get_nstreams();     
-        ft.backward(c_.cvalptr(n*mloc),&tmp[0], FourierTransform::get_cuda_streams(n%nstreams));
-      #else 
-        ft.backward(c_.cvalptr(n*mloc),&tmp[0]);
-      #endif	    
+        ft.backward(c_.cvalptr(n*mloc),NULL, FourierTransform::get_cuda_streams(n%nstreams),true,false,true);
+	printf("%d Saliendo backward - gpu %d\n",MPIdata::rank(),gpu);
+    fflush(stdout);
+	#else
+	ft.backward(c_.cvalptr(n*mloc),&tmp[0]);    
+	#endif
+	
+     	    
+      #if OPTIMIZE_GPU
+	cuPairwise(v,ft.get_f_device(),np012loc, FourierTransform::get_cuda_streams(n%nstreams));
+      	printf("%d Saliendo pairwise\n",MPIdata::rank());
+    fflush(stdout);
+	#else  
 
       #pragma omp parallel for
       for ( int i = 0; i < np012loc; i++ )
         tmp[i] *= v[i];
+      }
+	#endif
 
-      ft.forward(&tmp[0], &ctmp[0]);
+      #if OPTIMIZE_GPU
+	
+        ft.forward(NULL,&ctmp[0],FourierTransform::get_cuda_streams(n%nstreams),false, true,true);
+      	printf("%d Saliendo forward con ctmp de %d \n",MPIdata::rank(),sizeof(complex<double>)*2*c_.mloc());
+    fflush(stdout);
+	#else
+    ft.forward(&tmp[0], &ctmp[0]);
+	#endif
+
       int len = 2 * mloc;
       int inc1 = 1;
       double alpha = 1.0;
       daxpy(&len,&alpha,(double*)&ctmp[0],&inc1,&dcp[2*n*mloc],&inc1);
+      exit(-1);  
     }
+    printf("%dSaliendo Slater\n",MPIdata::rank());
+    fflush(stdout);
+    #if OPTIMIZE_GPU
+    if(gpu){
+    	cudaFreeHost(ctmp); 
+    	cuda_check_last(__FILE__,__LINE__);
+    }
+    #endif
     }
   }
 

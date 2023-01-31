@@ -41,6 +41,9 @@
 #include "my_cuda_utils.h"
 #endif
 
+#include <nvToolsExt.h>
+
+
 #if defined(USE_FFTW2) || defined(USE_FFTW3)
 #ifdef ADD_
 #define zdscal zdscal_
@@ -298,13 +301,45 @@ cudaStream_t* FourierTransform::cuda_streams;
 
 
 ////////////////////////////////////////////////////////////////////////////////
-void FourierTransform::forward(complex<double>* f, complex<double>* c)
+void FourierTransform::forward(complex<double>* f, complex<double>* c, cudaStream_t cuda_stream, bool enable_htod, bool enable_dtoh, bool gpu)
 {
 #if OPTIMIZE_GPU
- 
-	//TODO: COMPLETE
- 
+	cudaError_t cuErr;
 
+ 	int n[3];
+	n[0]=np0_; n[1]=np1_; n[2]=np2_loc();
+
+	if(enable_htod){
+		const double* const pf = (double*) f;
+		cuErr=cudaMemcpy(f_device,pf,sizeof(double)* 2 * n[0] * n[1] * n[2],cudaMemcpyHostToDevice);
+		//cuErr=cudaMemcpyAsync(f_device,pf,sizeof(double)* 2 * n[0] * n[1] * n[2],cudaMemcpyHostToDevice,cuda_stream);
+		cuda_error_check(cuErr,__FILE__,__LINE__);	
+	}
+
+
+	//Not sure about the order. Is it necessary to scale?
+	cuda_do_fft3d(-1, n, 1.0, f_device, f_device,planFWD,cuda_stream);
+
+	bm_.device_transpose_fwd(f_device, zvec_device,cuda_stream);
+	
+	#if TIMING
+	tm_map_fwd.start();
+	#endif
+	
+	bm_.device_zvec_to_vector(zvec_device,c_device,cuda_stream);
+	
+	#if TIMING
+	tm_map_fwd.stop();	
+	#endif
+
+	if(enable_dtoh)
+	{
+		printf("The size in FWD is %d\n",sizeof(double)*4*basis_.localsize());
+		fflush(stdout);
+		//cuErr=cudaMemcpy(c_device,(double*) c,sizeof(double)*4*basis_.localsize(),cudaMemcpyDeviceToHost);
+		cuErr=cudaMemcpyAsync(c_device,(double*)c,sizeof(double)*4*basis_.localsize(),cudaMemcpyDeviceToHost, cuda_stream);
+		cuda_error_check(cuErr, __FILE__, __LINE__);
+	}
 #else	
   fwd(f);
 #if TIMING
@@ -318,23 +353,31 @@ void FourierTransform::forward(complex<double>* f, complex<double>* c)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void FourierTransform::backward(const complex<double>* c, complex<double>* f, cudaStream_t cuda_stream)
+void FourierTransform::backward(const complex<double>* c, complex<double>* f, cudaStream_t cuda_stream, bool enable_htod, bool enable_dtoh,bool gpu)
 {
 
 #if OPTIMIZE_GPU
  #if TIMING
   tm_map_bwd.start();
  #endif
- 
+
+      //  printf("c[1] %lf [100] %ld [10000] %ld \n",c[1],c[100],c[10000]);
+       // fflush(stdout);
+
+
+
 //cuda mem copy c vector from host to device
   cudaError_t cuErr;
-  const double* const pc = (double*)c;
-  //cuErr=cudaMemcpy(c_device,pc,sizeof(double)*2*basis_.localsize(),cudaMemcpyHostToDevice);
-  cuErr=cudaMemcpyAsync(c_device,pc, sizeof(double)*2*basis_.localsize(),cudaMemcpyHostToDevice,cuda_stream);
-  cuda_error_check(cuErr, __FILE__,__LINE__);
-
+  
+  if(enable_htod){
+  	const double* const pc = (double*)c;
+  	cuErr=cudaMemcpy(c_device,pc,sizeof(double)*4*basis_.localsize(),cudaMemcpyHostToDevice);
+  	//cuErr=cudaMemcpyAsync(c_device,pc, sizeof(double)*4*basis_.localsize(),cudaMemcpyHostToDevice,cuda_stream);
+  	cuda_error_check(cuErr, __FILE__,__LINE__);
+  }
 // pass the c device version to bm and the f vector (which is gpu vector)
   bm_.device_vector_to_zvec(c_device,zvec_device,cuda_stream);
+
 
 #if TIMING
   tm_map_bwd.stop();
@@ -346,48 +389,51 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f, cu
    n[0]=np2_loc(); n[1]=np1_; n[2]=np0_;
    cuda_do_fft3d (1,n, 1.0, f_device, f_device, planBWD,cuda_stream);
 
- //  cuErr = cudaMemcpy((double*) f,f_device, sizeof(double)* 2 * n[0] * n[1] * n[2], cudaMemcpyDeviceToHost);
-   cuErr = cudaMemcpyAsync((double*)f, f_device,sizeof(double)*2* n[0] * n[1] * n[2], cudaMemcpyDeviceToHost,cuda_stream);
-   cuda_error_check(cuErr,__FILE__,__LINE__);
+   if(enable_dtoh){
+ 	cuErr = cudaMemcpy((double*) f,f_device, sizeof(double)* 2 * n[0] * n[1] * n[2], cudaMemcpyDeviceToHost);
+   	//cuErr = cudaMemcpyAsync((double*)f, f_device,sizeof(double)*2* n[0] * n[1] * n[2], cudaMemcpyDeviceToHost,cuda_stream);
+   	cuda_error_check(cuErr,__FILE__,__LINE__);
+  }
 
 
-cudaStreamSynchronize(cuda_stream);   
-if(!MPIdata::rank())
-{
-	printf("[45] %lf [0] %ld [32] %ld \n",f[45],f[0],f[32]);
-	fflush(stdout);
-}
-
-printf("%d LEAVING THE GPU\n",MPIdata::rank());
-fflush(stdout);
-
-exit(-1);    
-
-
+        //printf("f [1000] %lf [1000000] %ld  \n",f[1000],f[1000000]);
+       // fflush(stdout);
+//exit(-1);
 #else
-
 #if TIMING
   tm_map_bwd.start();
 #endif
+/*
+if((!MPIdata::rank()))
+{
+        printf("c[1] %lf [100] %ld [10000] %ld \n",c[1],c[100],c[10000]);
+        fflush(stdout);
+}
+*/
+
   bm_.vector_to_zvec(c,&zvec_[0]);
+
+/*
+if((!MPIdata::rank()))
+{
+        printf("zvec [1000] %lf [1000000] %ld  \n",zvec_[1000],zvec_[1000000]);
+        fflush(stdout);
+}
+*/
+
 #if TIMING
   tm_map_bwd.stop();
 #endif
   bwd(f);
-
-
-if(!MPIdata::rank())
+  /*
+if((!MPIdata::rank()))
 {
-        printf("[45] %lf [0] %ld [32] %ld \n",f[45],f[0],f[32]);
+        printf("f [1000] %lf [1000000] %ld  \n",f[1000],f[1000000]);
         fflush(stdout);
 }
-
-printf("%d LEAVING THE GPU\n",MPIdata::rank());
-fflush(stdout);
-exit(-1);
-
+*/
+//exit(-1);
 #endif
-
 }
 
 
@@ -1345,9 +1391,12 @@ void FourierTransform::init_lib(void)
  cudaError_t cErr2;
  //TODO: cudaStream_t* cuda_streams implement as a Resource with a Smart POINTER and free the resource
 
+
  if(!cuda_streams){
         int n_devices=0;
 
+	//Compile with -lnvToolsExt 
+	//nvtxRangePush("Allocating cuda_streams and cuBlas handle");
 
         cErr2 = cudaGetDeviceCount (&n_devices);
 	cuda_check_last(__FILE__,__LINE__);
@@ -1360,14 +1409,19 @@ void FourierTransform::init_lib(void)
         	cuda_check_last(__FILE__,__LINE__);
 	}
 
+	//CUBLAS implementation	
 	cublasStatus_t stat = cublasCreate(&handle); 
     	if(stat!= CUBLAS_STATUS_SUCCESS){
         	printf("CUBLAS initialization failed\n");
         	fflush(stdout);
         	exit(-1);
-    	}  
-
+    	} 
+       	
+	//nvtxRangePop();
   }
+
+
+
   const int lmem = np0_ * np1_ * np2_;
   int ioverflow;
   int ns[3];
@@ -1379,7 +1433,7 @@ void FourierTransform::init_lib(void)
 
   cudaMalloc(reinterpret_cast<void**> (&zvec_device), sizeof(double)*2*nvec_*np2_);
   cudaMalloc(reinterpret_cast<void**> (&f_device),sizeof(double)*2*np0_*np1_*np2_loc());
-  cudaMalloc(reinterpret_cast<void**> (&c_device),sizeof(double)*2*basis_.localsize());
+  cudaMalloc(reinterpret_cast<void**> (&c_device),sizeof(double)*4*basis_.localsize());
   cudaMalloc(reinterpret_cast<void**> (&ptr_out), sizeof(cufftDoubleComplex)*lmem);
   cudaMalloc(reinterpret_cast<void**> (&ptr_1), sizeof(cufftDoubleComplex)*lmem);
   if (cudaGetLastError() != cudaSuccess){
