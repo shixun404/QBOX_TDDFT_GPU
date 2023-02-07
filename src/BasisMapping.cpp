@@ -52,22 +52,20 @@ void zsctr_(int* n, complex<double>* x, int* indx, complex<double>* y);
 
 int alltoallv( void *sendbuf,  int *sendcounts,  int *sdispls, MPI_Datatype sendtype, void *recvbuf, int *recvcounts,  int *rdispls, MPI_Datatype recvtype, MPI_Comm comm)
 {
-int status=0;
+	int status=0;
 #if OPTIMIZE_BRUCK
-twophase_bruck_alltoallv((char*)sendbuf,sendcounts,sdispls,
-      sendtype,(char*)recvbuf,recvcounts,rdispls,
-      recvtype, comm);
+	twophase_bruck_alltoallv((char*)sendbuf,sendcounts,sdispls,
+      		sendtype,(char*)recvbuf,recvcounts,rdispls,
+      		recvtype, comm);
 #else
-status=MPI_Alltoallv(sendbuf,sendcounts,sdispls,
-      sendtype,recvbuf,recvcounts,rdispls,
-      recvtype, comm);
+	status=MPI_Alltoallv(sendbuf,sendcounts,sdispls,
+      		sendtype,recvbuf,recvcounts,rdispls,
+      		recvtype, comm);
 #endif
 
-return status;
+	return status;
 
 }
-
-
 
 
 
@@ -139,11 +137,11 @@ BasisMapping::BasisMapping (const Basis &basis, int np0, int np1, int np2, int n
     pw_cuda_error_check(cuErr,__LINE__);
  */
     ip_=(int*)malloc(basis_.localsize()*sizeof(int));
-
+    im_=(int*)malloc(basis_.localsize()*sizeof(int));
 #else
     ip_.resize(basis_.localsize());
-#endif
     im_.resize(basis_.localsize());
+#endif
 
     if ( myproc_ == 0 )
     {
@@ -214,7 +212,7 @@ BasisMapping::BasisMapping (const Basis &basis, int np0, int np1, int np2, int n
   {
     // basis is complex
     // compute index array ip_ for mapping vector->zvec
-    // Note: im_ is not used
+
 #if OPTIMIZE_GPU
     //cudaError_t cuErr;
     //cuErr=cudaHostAlloc((void**) &ip_, basis_.localsize()*sizeof(int),cudaHostAllocDefault);
@@ -225,6 +223,8 @@ BasisMapping::BasisMapping (const Basis &basis, int np0, int np1, int np2, int n
 #else   
     ip_.resize(basis_.localsize());
 #endif
+
+
     // map rods(h,k)
     // rod(h,k)   maps onto column irod*np2_ of zvec_, irod=0,..,nrods-1
     int ig = 0;
@@ -582,6 +582,7 @@ BasisMapping::BasisMapping (const Basis &basis, int np0, int np1, int np2, int n
 
 #if OPTIMIZE_GPU
 	ip_device=NULL;
+	im_device=NULL;
 	device_zvec_to_val=NULL;
 #endif
 }
@@ -598,7 +599,9 @@ int BasisMapping::allocate_device( cudaStream_t stream){
     cudaMalloc(reinterpret_cast<void**>(&ip_device),sizeof(int)*basis_.localsize());
     //cudaMallocHost(reinterpret_cast<void**>(&ip_device),sizeof(int)*basis_.localsize());
     cuda_check_last(__FILE__,__LINE__);
- 
+
+    cudaMalloc(reinterpret_cast<void**>(&im_device),sizeof(int)*basis_.localsize());
+    cuda_check_last(__FILE__,__LINE__);
     cudaMalloc(reinterpret_cast<void**>(&device_zvec_to_val),sizeof(int)*nvec_);
     cuda_check_last(__FILE__,__LINE__);
 
@@ -607,6 +610,9 @@ int BasisMapping::allocate_device( cudaStream_t stream){
     //cudaError_t cuErr=cudaMemcpyAsync(ip_device, ip_, sizeof(int)*basis_.localsize(),cudaMemcpyHostToDevice, stream);
     cuda_error_check(cuErr,__FILE__,__LINE__);
     
+    cuErr=cudaMemcpy(im_device, im_, sizeof(int)*basis_.localsize(),cudaMemcpyHostToDevice);
+    cuda_error_check(cuErr,__FILE__,__LINE__);
+
     cuErr=cudaMemcpy(device_zvec_to_val, zvec_to_val_.data(), sizeof(int)*nvec_,cudaMemcpyHostToDevice);
     cuda_error_check(cuErr,__FILE__,__LINE__);
 
@@ -622,9 +628,13 @@ BasisMapping::~BasisMapping()
 	if(ip_device)
         {
                 cudaFree(ip_device);
-
                 cuda_check_last(__FILE__,__LINE__);
         }
+	if(im_device)
+	{
+		cudaFree(im_device);
+		cuda_check_last(__FILE__,__LINE__);
+	}
 	if(device_zvec_to_val)
 	{
 		cudaFree(device_zvec_to_val);
@@ -632,19 +642,16 @@ BasisMapping::~BasisMapping()
 	}
 
         free(ip_);
-
 }
 
 void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaStream_t stream) const
 {
 
-    cudaMemsetAsync(ct,0,np012loc_*2*sizeof(double),stream);
+//  cudaMemsetAsync(ct,0,np012loc_*2*sizeof(double),stream);
+    cudaMemset(ct, 0, np012loc_*2*sizeof(double));
     cuda_check_last(__FILE__,__LINE__);
    
-   
-   
    //CUBLAS IMPLEMENTATION
-   
     /* cublasStatus_t stat = cublasSetStream(FourierTransform::get_cublasHandle(), stream); //TODO: Ensure it is passed by reference?
     if (stat!=cudaSuccess){
     	printf("Failed to assign stream to handle - CUBLAS\n");
@@ -667,43 +674,29 @@ void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaSt
    	
    	cublasZcopy(FourierTransform::get_cublasHandle(), count,x, incx, y, incy);
    }
-   */	
-    //CUSTOM IMPLEMENTATION
-    
-    cuZcopy(np2_,zvec,np2_,1,ct,1,np0_*np1_,device_zvec_to_val,nvec_,stream,-1);
+   */
 
+    //CUSTOM IMPLEMENTATION
+    cudaDeviceProp deviceProperties;
+    cudaGetDeviceProperties(&deviceProperties, FourierTransform::get_my_dev());
+    const unsigned int max_blocks = deviceProperties.maxGridSize[0];
+    cuZcopy(np2_,zvec,np2_,1,ct,1,np0_*np1_,device_zvec_to_val,nvec_,stream,1,max_blocks);
 
 }
 
 void BasisMapping::device_vector_to_zvec(const double *c,
   double *zvec,cudaStream_t stream) const
 {
-  cudaMemsetAsync(zvec,0,nvec_*np2_*2*sizeof(double),stream);
+  //cudaMemsetAsync(zvec,0,nvec_*np2_*2*sizeof(double),stream);
+  cudaMemset(zvec, 0, nvec_*np2_*2*sizeof(double));
   cuda_check_last(__FILE__,__LINE__);
   const int ng = basis_.localsize();
 
-  /*
- // PENDING 
- if ( basis_.real() )
-  {
-    
-    for ( int ig = 0; ig < ng; ig++ )
-    {
-      // zvec[ip_[ig]] = c[ig];
-      // zvec[im_[ig]] = conj(c[ig]);
-      const double a = pc[2*ig];
-      const double b = pc[2*ig+1];
-      const int ip = ip_[ig];
-      const int im = im_[ig];
-      pz[2*ip] = a;
-      pz[2*ip+1] = b;
-      pz[2*im] = a;
-      pz[2*im+1] = -b;
-    }
-  }
-  else*/
-
-  cuda_vector_to_zvec(c,zvec,ip_device,ng,stream);
+  
+  if ( basis_.real() )
+  	cuda_vector_to_zvec(c,zvec,ip_device,im_device,ng,stream,1);
+  else
+	cuda_vector_to_zvec(c,zvec,ip_device,NULL,ng,stream,0);
 }
 
 #endif
@@ -717,6 +710,7 @@ void BasisMapping::transpose_bwd(const complex<double> *zvec,
   // Transpose zvec to ct
   if ( nprocs_ == 1 )
   {
+
     // single task
 
     // clear ct
@@ -814,8 +808,6 @@ void BasisMapping::transpose_bwd(const complex<double> *zvec,
 void BasisMapping::transpose_fwd1(const std::complex<double> *ct,
                      int band) const
 {
-     
-
     double* const pr = (double*) &rbuf[0];
     const double* const pv = (const double*) ct;
     int isource=0;
@@ -837,8 +829,6 @@ void BasisMapping::transpose_fwd1(const std::complex<double> *ct,
     	}
 	isource+=(nstloc_-1-band)*basis_.nrod_loc(iproc)*np2_loc_[myproc_];
     }
-
-	
 }
 
 void BasisMapping::transpose_fwd2() const{
@@ -939,7 +929,7 @@ void BasisMapping::transpose_bwd3(std::complex<double> *ct, int band) const  {
       double* const pv = (double*) ct;
 
 
-      int isource=0; //band*basis._nrod_loc(0)*np2_loc_[myproc_];
+      int isource=0; 
       for ( int iproc = 0; iproc < nprocs_; iproc++ )
       {
 	isource+=band*basis_.nrod_loc(iproc)*np2_loc_[myproc_];      
@@ -963,13 +953,15 @@ void BasisMapping::transpose_bwd3(std::complex<double> *ct, int band) const  {
 }
 
 #endif
-/*END*/
 
 
 #if OPTIMIZE_GPU
 void BasisMapping::device_transpose_fwd(const double*ct, double* zvec, cudaStream_t stream) const
 {
-	cuZcopy(np2_,ct,1,np0_*np1_,zvec,np2_,1,device_zvec_to_val,nvec_,stream,-1);
+	cudaDeviceProp deviceProperties;
+        cudaGetDeviceProperties(&deviceProperties, FourierTransform::get_my_dev());
+        const int max_blocks = deviceProperties.maxGridSize[0];
+	cuZcopy(np2_,ct,1,np0_*np1_,zvec,np2_,1,device_zvec_to_val,nvec_,stream,-1,max_blocks);
 }
 
 #endif
@@ -1138,14 +1130,11 @@ void BasisMapping::doublevector_to_zvec(const complex<double> *c1,
 
 
 #if OPTIMIZE_GPU
-void BasisMapping::device_zvec_to_vector(const double * zvec, double * c, cudaStream_t stream) const{
+void BasisMapping::device_zvec_to_vector(const double * zvec, double * c, cudaStream_t stream) const
+{
 	const int ng= basis_.localsize();
-	
 	cuda_zvec_to_vector(zvec,c,ip_device,ng,stream);
-
-
 }
-
 
 #endif
 

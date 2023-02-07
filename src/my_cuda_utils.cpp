@@ -13,12 +13,12 @@ void cuda_error_check (cudaError_t cudaError, const char* const file, int line){
   cErr2 = cudaGetLastError();
   if (cudaError != cudaSuccess || cErr2 != cudaSuccess) {
     pid = getpid();
-    printf("%d CUDA %s Error line %d\n", pid,file, line);
-    printf("%d CUDA  Code Error: %s\n", pid, cudaGetErrorString(cudaError));
-    printf("%d CUDA  Last Error: %s\n", pid, cudaGetErrorString(cErr2));
+    fprintf(stderr,"%d CUDA %s Error line %d\n", pid,file, line);
+    fprintf(stderr,"%d CUDA  Code Error: %s\n", pid, cudaGetErrorString(cudaError));
+    fprintf(stderr,"%d CUDA  Last Error: %s\n", pid, cudaGetErrorString(cErr2));
     cudaMemGetInfo(&free,&total);
-    printf("%d Free: %zu , Total: %zu\n", pid, free, total);
-    fflush(stdout);
+    fprintf(stderr,"%d Free: %zu , Total: %zu\n", pid, free, total);
+    fflush(stderr);
     exit(-1);
   }
 

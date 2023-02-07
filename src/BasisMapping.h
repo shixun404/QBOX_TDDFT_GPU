@@ -41,23 +41,21 @@ class BasisMapping
   std::vector<int> scounts, sdispl, rcounts, rdispl;
   mutable std::vector<std::complex<double> > sbuf, rbuf;
 
-  std::vector<int> im_;
   std::vector<int> ipack_, iunpack_, zvec_to_val_;
 
 
 #if OPTIMIZE_GPU
-  int * ip_device;
+  int * ip_device, * im_device;
   int * device_zvec_to_val;
-  int * ip_;
+  int * ip_, *im_;
 #else
-  std::vector<int>  ip_;
+  std::vector<int>  ip_, im_;
 #endif
   
   public:
   BasisMapping (const Basis &basis, int np0, int np1, int np2, int nstloc=1); 
  
 #if OPTIMIZE_GPU
- // BasisMapping (const Basis &basis, int np0, int np1, int np2, cudaStream_t stream);
   ~BasisMapping();
 #endif
    
@@ -99,21 +97,17 @@ class BasisMapping
 
   void transpose_bwd(const std::complex<double> *zvec,
                      std::complex<double> *ct) const;
+
+
 #if OPTIMIZE_TRANSPOSE
 
-void transpose_fwd1(const std::complex<double> *ct,
+  void transpose_fwd1(const std::complex<double> *ct,
                       int band=0) const;
-
-void transpose_fwd2() const;
-
-
-void transpose_fwd3(std::complex<double> *zvec, int band=0) const;
-
-void transpose_bwd1(const std::complex<double> *zvec,
-                     int band=0) const;
-void transpose_bwd2() const;
-void transpose_bwd3(std::complex<double> *ct,int band=0) const;
-
+  void transpose_fwd2() const;
+  void transpose_fwd3(std::complex<double> *zvec, int band=0) const;
+  void transpose_bwd1(const std::complex<double> *zvec,
+  void transpose_bwd2() const;
+  void transpose_bwd3(std::complex<double> *ct,int band=0) const;
 #endif
   
   

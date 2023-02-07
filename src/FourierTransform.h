@@ -66,8 +66,6 @@ class FourierTransform
   static const int nstreams =4; //THIS IS A PERFORMANCE PARAMETER
   static cublasHandle_t handle;
 
-  cufftDoubleComplex *ptr_1;
-  cufftDoubleComplex *ptr_out;
   double * c_device;
   double * zvec_device;
   double * f_device;
@@ -145,16 +143,18 @@ class FourierTransform
   ~FourierTransform ();
 
   
-  #if OPTIMIZE_GPU 
+#if OPTIMIZE_GPU 
   static cudaStream_t& get_cuda_streams(int i){return cuda_streams[i];}
   static int get_nstreams(){return nstreams;}
+  static int get_my_dev(){return my_dev;}
+
   //CUBLAS IMPLEMENTATION
   static cublasHandle_t & get_cublasHandle(){return handle;}
   
   
   double* get_f_device() {return f_device;}
   double* get_c_device(){return c_device;} 
-  #endif 
+#endif 
   
   
   

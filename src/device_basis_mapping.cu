@@ -41,9 +41,43 @@ void cuda_zvec_to_vector (const double * zvec, double *c, const int* ip_, const 
 }
 
 
+/*********************************/
+
+template<int D> struct Copy {
+        static inline __device__ void 
+        copy(double* dst, const double* src, const int *ip, const int *im, const int id);
+
+};
+
+template<> struct Copy<0>{
+        static inline __device__ void
+        copy(double* dst, const double* src, const int *ip, const int *im, const int id){
+                const int index = ip[id];
+		dst[2*index]=src[2*id];
+		dst[2*index+1]=src[2*id+1];
+   	}
+};
+
+
+
+template<> struct Copy<1>{
+        static inline __device__ void
+        copy(double* dst, const double* src, const int *ip, const int *im, const int id){
+                const int indexp = ip[id];
+                const int indexm = im[id];
+
+		dst[2*indexp]=src[2*id];
+                dst[2*indexp+1]=src[2*id+1];
+
+		dst[2*indexm]=src[2*id];
+		dst[2*indexm+1]=-src[2*id+1];
+        }
+};
+
+
 //TODO: Think in another coalescing-friendly version
-template <int unroll>
-__global__ void vector_to_zvec_kernel(const double *c, double *zvec, const int* ip_, const int ng)
+template <int unroll,int D>
+__global__ void vector_to_zvec_kernel(const double *c, double *zvec, const int* ip_, const int* im_, const int ng)
 {
         const int global_id=blockDim.x*blockIdx.x*unroll+threadIdx.x*unroll;
 
@@ -53,16 +87,15 @@ __global__ void vector_to_zvec_kernel(const double *c, double *zvec, const int* 
                 const int id=global_id+i;
                 if(id<ng)
                 {
-                        const int ip=ip_[id];
-                        zvec[2*ip]=c[2*id];
-                        zvec[2*ip+1]=c[2*id+1];
-                }
+			Copy<D>::copy(zvec,c,ip_,im_,id);
+                	
+		}
         }
 }
 
 
 void cuda_vector_to_zvec (const double *c,
-  double *zvec, const int* ip_, const int ng, cudaStream_t  stream)
+  double *zvec, const int* ip_, const int * im_, const int ng, cudaStream_t  stream, const int PLAN)
 {
         constexpr int THREADS_PER_BLOCK=128;
         constexpr int UNROLL_FACTOR=8;
@@ -72,7 +105,10 @@ void cuda_vector_to_zvec (const double *c,
 
         dim3 threads (THREADS_PER_BLOCK);
         dim3 blocks (block_num);
-        vector_to_zvec_kernel<UNROLL_FACTOR><<<blocks,threads,0,stream>>>(c,zvec,ip_,ng);
+	if(PLAN)
+        	vector_to_zvec_kernel<UNROLL_FACTOR,1><<<blocks,threads,0,stream>>>(c,zvec,ip_,im_,ng);
+	else
+		vector_to_zvec_kernel<UNROLL_FACTOR,0><<<blocks,threads,0,stream>>>(c,zvec,ip_,im_,ng);
 	if (cudaGetLastError() != cudaSuccess){
                    fprintf(stderr, "Cuda error device_bm: Failed kernel\n");
                    exit(-1);
@@ -81,7 +117,9 @@ void cuda_vector_to_zvec (const double *c,
 	
 	return;
 }
+ 
 
+/***********************************/
 
 
 
@@ -124,12 +162,10 @@ template<> struct Offset<1>{
 template<int D>
 __global__ void cu_Z_copy(const int count, const double* x, const int offset_x, const int incx, double * y, const int offset_y, const int incy, const int *offset){
 
-//	const int src = blockIdx.x*offset_x*2;
-//	const int dest = offset_y[blockIdx.x]*2;
-const int src = Offset<D>::calculateX(offset_x, offset, blockIdx.x);
-const int dest = Offset<D>::calculateY(offset_y,offset, blockIdx.x);
-
+	const int src = Offset<D>::calculateX(offset_x, offset, blockIdx.x);
+	const int dest = Offset<D>::calculateY(offset_y,offset, blockIdx.x);
 	const int n_iters = ((count+blockDim.x-1)/blockDim.x);
+
 
 	for(int i=0; i<n_iters; i++){
 		const int thx=threadIdx.x + i*blockDim.x;
@@ -145,11 +181,18 @@ const int dest = Offset<D>::calculateY(offset_y,offset, blockIdx.x);
 
 //WARNING: IT does not support negative increments
 //https://netlib.org/blas/zcopy.f
-void cuZcopy(const int count, const double * x, const int offset_x, const int incx, double * y, const int offset_y, const int incy, const int * offset, const int batches, cudaStream_t stream, const int PLAN){
+void cuZcopy(const int count, const double * x, const int offset_x, const int incx, double * y, const int offset_y, const int incy, const int * offset, const int batches, cudaStream_t stream, const int PLAN, const int max_blocks){
 
 	constexpr int THREADS_PER_BLOCK=128;
 
 	dim3 threads(THREADS_PER_BLOCK);
+	//TODO: check batches < max_blocks allowed for the architecture
+	if (batches>max_blocks)
+	{
+		 fprintf(stderr, "Cuda error cu_zcopy: More blocks requested than available\n");
+		 exit(-1);
+	}
+	
 	dim3 blocks (batches);
  	if (PLAN==-1)	
 		cu_Z_copy<-1><<<blocks, threads, 0, stream>>>(count,x,offset_x,incx,y,offset_y,incy,offset);
@@ -164,7 +207,7 @@ void cuZcopy(const int count, const double * x, const int offset_x, const int in
 
 }	
 
-
+/********************************************/
 
 //TODO: templated for T type
 template<int unroll>
@@ -172,7 +215,7 @@ __global__ void cu_pairwise(const double* src, double* dest, const int N){
 
 	const int thx = blockIdx.x*blockDim.x*unroll + threadIdx.x;
 
-	for(int i=0;i<unroll;i++) //FIX! COMPLEX MULTIPLICATION!!
+	for(int i=0;i<unroll;i++) 
 	{
 		const int idx = thx+i*blockDim.x;
 		if(idx<N)
@@ -180,6 +223,7 @@ __global__ void cu_pairwise(const double* src, double* dest, const int N){
 			//Complex by scalar
 			dest[2*idx] = dest[2*idx]*src[idx];
 			dest[2*idx+1]=dest[2*idx+1]*src[idx];
+
 			//Complex by Complex
 			/*dest[2*idx] = dest[2*idx]*src[2*idx]-dest[2*idx+1]*src[2*idx+1];
 			dest[2*idx+1] = dest[2*idx]*src[2*idx+1] + dest[2*idx+1]*src[2*idx] ;*/

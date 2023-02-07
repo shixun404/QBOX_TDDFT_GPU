@@ -145,7 +145,7 @@ void SlaterDet::resize(const UnitCell& cell, const UnitCell& refcell,
             for ( int i = 0; i < tmpr.size(); i++ )
               tmpr[i] = 0.0;
             ft1.backward(ctmp.cvalptr(n*ctmp.mloc()),&tmpr[0]);
-            ft2.forward(&tmpr[0], c_.valptr(n*c_.mloc()));
+	    ft2.forward(&tmpr[0], c_.valptr(n*c_.mloc()));
           }
         }
       }
@@ -286,59 +286,59 @@ void SlaterDet::compute_density(FourierTransform& ft,
   {
   bool execute=true;
 #if OPTIMIZE_TRANSPOSE
-    // only one transform at a time
- if (ft.get_optimization())
- {
-  execute=false;
-  for ( int n = 0; n < nstloc(); n++ )
-    {
-      // global n index
-      const int nn = ctxt_.mycol() * c_.nb() + n;
-      const double fac = weight * omega_inv * occ_[nn];
-
-      if ( fac > 0.0 )
-      {
-        ft.backward1(c_.cvalptr(n*c_.mloc()),n);
-      }
-    }
-  ft.backward2();
-  for ( int n=0;n < nstloc(); n++)
+  // only one transform at a time
+  if (ft.get_optimization())
   {
-      const int nn = ctxt_.mycol() * c_.nb() + n;
-      const double fac = weight * omega_inv * occ_[nn];
-      if(fac > 0.0)
-      {
-      	ft.backward3(&tmp[0],n);
-      	for ( int i = 0; i < np012loc; i++ )
-          rho[i] += fac * norm(tmp[i]);
-      }
-  }
+  	execute=false;
+  	for ( int n = 0; n < nstloc(); n++ )
+    	{
+      		// global n index
+      		const int nn = ctxt_.mycol() * c_.nb() + n;
+      		const double fac = weight * omega_inv * occ_[nn];
+
+      		if ( fac > 0.0 )
+      		{
+        		ft.backward1(c_.cvalptr(n*c_.mloc()),n);
+      		}
+    	}
+  	ft.backward2();
+  	for ( int n=0;n < nstloc(); n++)
+  	{
+      		const int nn = ctxt_.mycol() * c_.nb() + n;
+      		const double fac = weight * omega_inv * occ_[nn];
+      		if(fac > 0.0)
+      		{
+      			ft.backward3(&tmp[0],n);
+      			for ( int i = 0; i < np012loc; i++ )
+          			rho[i] += fac * norm(tmp[i]);
+      		}
+  	}
  }
 
 
 #endif
 
+  if(execute){
+ 	for ( int n = 0; n < nstloc(); n++ )
+    	{    
+      		// global n index
+      		const int nn = ctxt_.mycol() * c_.nb() + n; 
+      		const double fac = weight * omega_inv * occ_[nn];
 
- if(execute){
- for ( int n = 0; n < nstloc(); n++ )
-    {    
-      // global n index
-      const int nn = ctxt_.mycol() * c_.nb() + n; 
-      const double fac = weight * omega_inv * occ_[nn];
-
-      if ( fac > 0.0 )
-      {   
-	#if OPTIMIZE_GPU
-	int nstreams=FourierTransform::get_nstreams();      
-	ft.backward(c_.cvalptr(n*c_.mloc()),&tmp[0], FourierTransform::get_cuda_streams(n%nstreams));
-	#else 
-        ft.backward(c_.cvalptr(n*c_.mloc()),&tmp[0]);
-	#endif
-	for ( int i = 0; i < np012loc; i++ )
-          rho[i] += fac * norm(tmp[i]);
-      }    
-    }    
+      		if ( fac > 0.0 )
+      		{   
+#if OPTIMIZE_GPU
+			int nstreams=FourierTransform::get_nstreams();      
+			ft.backward(c_.cvalptr(n*c_.mloc()),&tmp[0],0); // FourierTransform::get_cuda_streams(n%nstreams));
+#else 
+		        ft.backward(c_.cvalptr(n*c_.mloc()),&tmp[0]);
+#endif
+			for ( int i = 0; i < np012loc; i++ )
+          			rho[i] += fac * norm(tmp[i]);
+      		}    
+    	}    
   }
+
  }
 }
 
@@ -459,20 +459,28 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
   // transform back to reciprocal space and add to sdp
   // sdp[n] += v * sd[n]
 
-
-  complex<double> * ctmp, *tmp;
-  #if OPTIMIZE_GPU
-  //TODO: Check if mloc()/np012loc changes across invocations. Otherwise, allocate in constructor only once.
+#if OPTIMIZE_GPU
   int nstreams=FourierTransform::get_nstreams();
 
-  cudaMallocHost(reinterpret_cast<void**>(&ctmp), 2*c_.mloc()*sizeof(complex<double>));
+/*
+  //TODO: Check if mloc() changes across invocations. Otherwise, allocate in constructor only once
+  complex<double> *ctmp, *tmp;
+  cudaMallocHost(reinterpret_cast<void**>(&ctmp), 4*c_.mloc()*sizeof(double));
   cuda_check_last(__FILE__,__LINE__);  
-  //cudaMallocHost(reinterpret_cast<void**>(&tmp), ft.np012loc()*sizeof(complex<double>));
-  //cuda_check_last(__FILE__,__LINE__);
-  #else
-  	vector<complex<double> > tmp(ft.np012loc());
-  	vector<complex<double> > ctmp(2*c_.mloc());
-  #endif
+*/  
+#endif
+
+  complex<double>* ctmp = (complex<double>*) malloc(c_.mloc()*sizeof(complex<double>));
+  complex<double>* tmp = (complex<double>*) malloc(ft.np012loc()*sizeof(complex<double>));
+
+  if(!ctmp){
+  	fprintf(stderr,"ERROR IN SLATERDET::RS_MUL_ADD ALLOCATING MEMORY FOR CTMP VECTOR\n");	  
+  	fflush(stderr);
+	exit -1;
+  }
+  //vector<complex<double> > tmp(ft.np012loc());
+  //vector<complex<double> > ctmp(2*c_.mloc());
+  
   const int np012loc = ft.np012loc();
   const int mloc = c_.mloc();
   double* dcp = (double*) sdp.c().valptr();
@@ -503,7 +511,6 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
       #pragma omp parallel for
       for ( int i = 0; i < np012loc; i++ )
         tmp[i] *= v[i];
-
       ft.forward(&tmp[0], &ctmp[0]);
       int len = 2 * mloc;
       int inc1 = 1;
@@ -551,57 +558,56 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
  
 #endif
   if(execute){
-    printf("%d Entrando Slater\n",MPIdata::rank());
-    fflush(stdout);
     for ( int n = 0; n <  nstloc(); n++ )
     {
-      #if OPTIMIZE_GPU
-        ft.backward(c_.cvalptr(n*mloc),NULL, FourierTransform::get_cuda_streams(n%nstreams),true,false,true);
-	printf("%d Saliendo backward - gpu %d\n",MPIdata::rank(),gpu);
-    fflush(stdout);
-	#else
+
+#if OPTIMIZE_GPU
+        ft.backward(c_.cvalptr(n*mloc),NULL, 0,true,false,true);
+#else
 	ft.backward(c_.cvalptr(n*mloc),&tmp[0]);    
-	#endif
+#endif
 	
      	    
-      #if OPTIMIZE_GPU
-	cuPairwise(v,ft.get_f_device(),np012loc, FourierTransform::get_cuda_streams(n%nstreams));
-      	printf("%d Saliendo pairwise\n",MPIdata::rank());
-    fflush(stdout);
-	#else  
+#if OPTIMIZE_GPU
+	cuPairwise(v,ft.get_f_device(),np012loc, 0); //FourierTransform::get_cuda_streams(n%nstreams)
+#else  
 
       #pragma omp parallel for
       for ( int i = 0; i < np012loc; i++ )
         tmp[i] *= v[i];
-      }
-	#endif
+#endif
 
-      #if OPTIMIZE_GPU
+
+#if OPTIMIZE_GPU
+        ft.forward(NULL, &ctmp[0],0,false, true,true);
+#else
+    	ft.forward(&tmp[0], &ctmp[0]);
+#endif
 	
-        ft.forward(NULL,&ctmp[0],FourierTransform::get_cuda_streams(n%nstreams),false, true,true);
-      	printf("%d Saliendo forward con ctmp de %d \n",MPIdata::rank(),sizeof(complex<double>)*2*c_.mloc());
-    fflush(stdout);
-	#else
-    ft.forward(&tmp[0], &ctmp[0]);
-	#endif
-
+   
       int len = 2 * mloc;
       int inc1 = 1;
       double alpha = 1.0;
+      
+      /*
+#if OPTIMIZE_GPU
+      cublasDaxpy(FourierTransform::get_cublasHandle(), len, &alpha, ft.get_c_device(), inc1, &dcp_device[2*n*mloc], inc1)
+#else
+      */	      
       daxpy(&len,&alpha,(double*)&ctmp[0],&inc1,&dcp[2*n*mloc],&inc1);
-      exit(-1);  
+//#endif
+   
     }
-    printf("%dSaliendo Slater\n",MPIdata::rank());
-    fflush(stdout);
-    #if OPTIMIZE_GPU
-    if(gpu){
-    	cudaFreeHost(ctmp); 
-    	cuda_check_last(__FILE__,__LINE__);
-    }
-    #endif
-    }
-  }
-
+   }
+ }
+/*
+#if OPTIMIZE_GPU
+  cudaFreeHost(ctmp);
+  cuda_check_last(__FILE__,__LINE__);
+#endif
+*/
+  free(tmp);
+  free(ctmp);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
