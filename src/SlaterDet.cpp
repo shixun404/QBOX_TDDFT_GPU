@@ -470,13 +470,14 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
 */  
 #endif
 
+  //TODO: Pending to check if ctmp needs to be reallocated for BATCHED times
   complex<double>* ctmp = (complex<double>*) malloc(c_.mloc()*sizeof(complex<double>));
   complex<double>* tmp = (complex<double>*) malloc(ft.np012loc()*sizeof(complex<double>));
 
   if(!ctmp){
   	fprintf(stderr,"ERROR IN SLATERDET::RS_MUL_ADD ALLOCATING MEMORY FOR CTMP VECTOR\n");	  
   	fflush(stderr);
-	exit -1;
+	exit(-1);
   }
   //vector<complex<double> > tmp(ft.np012loc());
   //vector<complex<double> > ctmp(2*c_.mloc());
@@ -558,46 +559,35 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
  
 #endif
   if(execute){
-    for ( int n = 0; n <  nstloc(); n++ )
+
+#if OPTIMIZE_GPU
+    const int iters = (nstloc()+FourierTransform::get_nbatches()-1)/(FourierTransform::get_nbatches());
+    for ( int n = 0; n < iters; n++ )
     {
-
-#if OPTIMIZE_GPU
-        ft.backward(c_.cvalptr(n*mloc),NULL, 0,true,false,true);
-#else
-	ft.backward(c_.cvalptr(n*mloc),&tmp[0]);    
-#endif
-	
-     	    
-#if OPTIMIZE_GPU
-	cuPairwise(v,ft.get_f_device(),np012loc, 0); //FourierTransform::get_cuda_streams(n%nstreams)
-#else  
-
-      #pragma omp parallel for
-      for ( int i = 0; i < np012loc; i++ )
-        tmp[i] *= v[i];
-#endif
-
-
-#if OPTIMIZE_GPU
-        ft.forward(NULL, &ctmp[0],0,false, true,true);
-#else
-    	ft.forward(&tmp[0], &ctmp[0]);
-#endif
-	
-   
-      int len = 2 * mloc;
-      int inc1 = 1;
-      double alpha = 1.0;
-      
-      /*
-#if OPTIMIZE_GPU
-      cublasDaxpy(FourierTransform::get_cublasHandle(), len, &alpha, ft.get_c_device(), inc1, &dcp_device[2*n*mloc], inc1)
-#else
-      */	      
-      daxpy(&len,&alpha,(double*)&ctmp[0],&inc1,&dcp[2*n*mloc],&inc1);
-//#endif
-   
+	std::cout<<"HELLO\n";
+	ft.backward(c_.cvalptr(n*mloc*FourierTransform::get_nbatches()), NULL, 0, true, false, true, ((n+1)*FourierTransform::get_nbatches()<nstloc())?FourierTransform::get_nbatches():nstloc()-n*FourierTransform::get_nbatches());
+	//cuPairwise(v,ft.get_f_device(),np012loc, 0); //FourierTransform::get_cuda_streams(n%nstreams)
+	//ft.forward(NULL, &ctmp[0],0,false, true,true);
+	//int len = 2 * mloc;
+	//int inc1 = 1;
+	//double alpha = 1.0;
+	//cublasDaxpy(FourierTransform::get_cublasHandle(), len, &alpha, ft.get_c_device(), inc1, &dcp_device[2*n*mloc], inc1)
     }
+#else
+    for (int n=0; n< nstloc();n++)
+    {
+	    ft.backward(c_.cvalptr(n*mloc),&tmp[0]);
+	    #pragma omp parallel for
+	    for ( int i = 0; i < np012loc; i++ )
+         	tmp[i] *= v[i];
+	    ft.forward(&tmp[0], &ctmp[0]);
+	    int len = 2 * mloc;
+	    int inc1 = 1;
+	    double alpha = 1.0;
+	    daxpy(&len,&alpha,(double*)&ctmp[0],&inc1,&dcp[2*n*mloc],&inc1);
+    }
+
+#endif
    }
  }
 /*

@@ -74,10 +74,10 @@ class BasisMapping
 
 #if OPTIMIZE_GPU
   int allocate_device(cudaStream_t stream);
-  void device_vector_to_zvec(const double *c, double *zvec, cudaStream_t stream) const;
-  void device_transpose_bwd(const double *zvec, double * ct, cudaStream_t stream) const;
-  void device_transpose_fwd(const double*ct, double * zvec, cudaStream_t stream) const;
-  void device_zvec_to_vector(const double * zvec, double * c, cudaStream_t stream) const;
+  void device_vector_to_zvec(const double *c, double *zvec, cudaStream_t stream, const int batch=1) const;
+  void device_transpose_bwd(const double *zvec, double * ct, cudaStream_t stream, const int batch=1) const;
+  void device_transpose_fwd(const double*ct, double * zvec, cudaStream_t stream, const int batch=1) const;
+  void device_zvec_to_vector(const double * zvec, double * c, cudaStream_t stream, const int batch=1) const;
 #endif
 
 

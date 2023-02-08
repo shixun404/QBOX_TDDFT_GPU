@@ -644,11 +644,11 @@ BasisMapping::~BasisMapping()
         free(ip_);
 }
 
-void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaStream_t stream) const
+void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaStream_t stream, const int batch) const
 {
 
 //  cudaMemsetAsync(ct,0,np012loc_*2*sizeof(double),stream);
-    cudaMemset(ct, 0, np012loc_*2*sizeof(double));
+    cudaMemset(ct, 0, np012loc_*2*batch*sizeof(double));
     cuda_check_last(__FILE__,__LINE__);
    
    //CUBLAS IMPLEMENTATION
@@ -680,23 +680,23 @@ void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaSt
     cudaDeviceProp deviceProperties;
     cudaGetDeviceProperties(&deviceProperties, FourierTransform::get_my_dev());
     const unsigned int max_blocks = deviceProperties.maxGridSize[0];
-    cuZcopy(np2_,zvec,np2_,1,ct,1,np0_*np1_,device_zvec_to_val,nvec_,stream,1,max_blocks);
+    cuZcopy(np2_,zvec,np2_,1,ct,1,np0_*np1_,device_zvec_to_val,nvec_,stream,batch,1,max_blocks,zvec_size(),np0_*np1_*np2_loc());
 
 }
 
 void BasisMapping::device_vector_to_zvec(const double *c,
-  double *zvec,cudaStream_t stream) const
+  double *zvec,cudaStream_t stream, const int batch) const
 {
   //cudaMemsetAsync(zvec,0,nvec_*np2_*2*sizeof(double),stream);
-  cudaMemset(zvec, 0, nvec_*np2_*2*sizeof(double));
+  cudaMemset(zvec, 0, nvec_*np2_*2*batch*sizeof(double));
   cuda_check_last(__FILE__,__LINE__);
   const int ng = basis_.localsize();
 
   
   if ( basis_.real() )
-  	cuda_vector_to_zvec(c,zvec,ip_device,im_device,ng,stream,1);
+  	cuda_vector_to_zvec(c,zvec,ip_device,im_device,ng,zvec_size(),stream,batch,1);
   else
-	cuda_vector_to_zvec(c,zvec,ip_device,NULL,ng,stream,0);
+	cuda_vector_to_zvec(c,zvec,ip_device,NULL,ng,zvec_size(),stream,batch,0);
 }
 
 #endif
@@ -956,12 +956,12 @@ void BasisMapping::transpose_bwd3(std::complex<double> *ct, int band) const  {
 
 
 #if OPTIMIZE_GPU
-void BasisMapping::device_transpose_fwd(const double*ct, double* zvec, cudaStream_t stream) const
+void BasisMapping::device_transpose_fwd(const double*ct, double* zvec, cudaStream_t stream, const int batch) const
 {
 	cudaDeviceProp deviceProperties;
         cudaGetDeviceProperties(&deviceProperties, FourierTransform::get_my_dev());
         const int max_blocks = deviceProperties.maxGridSize[0];
-	cuZcopy(np2_,ct,1,np0_*np1_,zvec,np2_,1,device_zvec_to_val,nvec_,stream,-1,max_blocks);
+	cuZcopy(np2_,ct,1,np0_*np1_,zvec,np2_,1,device_zvec_to_val,nvec_,stream,batch,-1,max_blocks,np0_*np1_*np2_loc(),zvec_size());
 }
 
 #endif
@@ -1130,7 +1130,7 @@ void BasisMapping::doublevector_to_zvec(const complex<double> *c1,
 
 
 #if OPTIMIZE_GPU
-void BasisMapping::device_zvec_to_vector(const double * zvec, double * c, cudaStream_t stream) const
+void BasisMapping::device_zvec_to_vector(const double * zvec, double * c, cudaStream_t stream, const int batch) const
 {
 	const int ng= basis_.localsize();
 	cuda_zvec_to_vector(zvec,c,ip_device,ng,stream);

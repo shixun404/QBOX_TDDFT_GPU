@@ -65,7 +65,7 @@ class FourierTransform
   static cudaStream_t* cuda_streams;
   static const int nstreams =4; //THIS IS A PERFORMANCE PARAMETER
   static cublasHandle_t handle;
-
+  static const int nbatches=4; //THISIS A PERFORMANCE PARAMETER
   double * c_device;
   double * zvec_device;
   double * f_device;
@@ -131,7 +131,7 @@ class FourierTransform
   void bwd(std::complex<double>* val);
 
 #if OPTIMIZE_GPU 
-  void cuda_do_fft3d( const int fsign, const int  *n, const double scale,  double *data, double* data2,cufftHandle &plan, cudaStream_t cuda_stream);
+  void cuda_do_fft3d( const int fsign, const int  *n, const double scale,  double *data, double* data2,cufftHandle &plan, cudaStream_t cuda_stream, const int batches = 1);
 #endif
 
   public:
@@ -147,7 +147,7 @@ class FourierTransform
   static cudaStream_t& get_cuda_streams(int i){return cuda_streams[i];}
   static int get_nstreams(){return nstreams;}
   static int get_my_dev(){return my_dev;}
-
+  static int get_nbatches(){return nbatches;}
   //CUBLAS IMPLEMENTATION
   static cublasHandle_t & get_cublasHandle(){return handle;}
   
@@ -166,7 +166,7 @@ class FourierTransform
   
   
   
-  void backward (const std::complex<double>* c, std::complex<double>* f, cudaStream_t cuda_stream=0, bool enable_htod = true, bool enable_dtoh = true,bool gpu=false);
+  void backward (const std::complex<double>* c, std::complex<double>* f, cudaStream_t cuda_stream=0, bool enable_htod = true, bool enable_dtoh = true,bool gpu=false, const int nbaches=1);
   //void backward (const std::complex<double>* c, std::complex<double>* f);
  
 #if OPTIMIZE_TRANSPOSE

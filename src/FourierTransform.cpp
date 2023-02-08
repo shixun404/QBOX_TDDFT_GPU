@@ -157,7 +157,7 @@ void fftcu_plan3d_z(      cufftHandle  &plan,
 void FourierTransform::cuda_do_fft3d( const int                 fsign,
                                 const int                *n,
                                 const double              scale,
-                                      double *data, double* data2,cufftHandle & plan, cudaStream_t cuda_stream){
+                                      double *data, double* data2,cufftHandle & plan, cudaStream_t cuda_stream, const int batches){
 
   int ioverflow, lmem;
   cufftResult_t cErr;
@@ -392,92 +392,69 @@ if(!MPIdata::rank())
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void FourierTransform::backward(const complex<double>* c, complex<double>* f, cudaStream_t cuda_stream, bool enable_htod, bool enable_dtoh,bool gpu)
+void FourierTransform::backward(const complex<double>* c, complex<double>* f, cudaStream_t cuda_stream, bool enable_htod, bool enable_dtoh,bool gpu, const int batches)
 {
 
-
-	/*
-if(!MPIdata::rank())
-{
-                printf("BACKWARD. h_to_d %d; d_to_h %d \n",enable_htod, enable_dtoh);
-		std::cout << "c[1] "<<c[1]<<" [100] "<<c[100] <<"[10000] "<< c[10000]<< "\n";
-    		fflush(stdout);
-}
-*/
 	
 #if OPTIMIZE_GPU
  #if TIMING
-  tm_map_bwd.start();
+   tm_map_bwd.start();
  #endif
 
+   //cuda mem copy c vector from host to device
+   cudaError_t cuErr;
 
-
-//cuda mem copy c vector from host to device
-  cudaError_t cuErr;
-
-
-  if(enable_htod){
+   if(enable_htod){
   	const double* const pc = (double*)c;
-	cuErr=cudaMemcpy(c_device,pc,sizeof(double)*2*basis_.localsize(),cudaMemcpyHostToDevice);
+	cuErr=cudaMemcpy(c_device,pc,sizeof(double)*2*basis_.localsize()*batches,cudaMemcpyHostToDevice);
   	//cuErr=cudaMemcpyAsync(c_device,pc, sizeof(double)*2*basis_.localsize(),cudaMemcpyHostToDevice,cuda_stream);
   	cuda_error_check(cuErr, __FILE__,__LINE__);
-  }
-// pass the c device version to bm and the f vector (which is gpu vector)
-  bm_.device_vector_to_zvec(c_device,zvec_device,cuda_stream);
+   }
+   // pass the c device version to bm and the f vector (which is gpu vector)
+   bm_.device_vector_to_zvec(c_device,zvec_device,cuda_stream,batches);
 
-/*  
-  //DELETE
-  cuErr=cudaMemcpy((double*)zvec_.data(), zvec_device, sizeof(double)*2*1200000,cudaMemcpyDeviceToHost);
-  cuda_error_check(cuErr, __FILE__,__LINE__);
-
-
-if(!MPIdata::rank())
-{
-        std::cout <<"GPU zvec [15] "<<zvec_[15]<<"[100k]"<<zvec_[100000]<<"\n";
-        fflush(stdout);
-}
-*/
 
 
 #if TIMING
-  tm_map_bwd.stop();
+   tm_map_bwd.stop();
 #endif
 
-   bm_.device_transpose_bwd(zvec_device,f_device, cuda_stream);
+   bm_.device_transpose_bwd(zvec_device,f_device, cuda_stream,batches);
 
+exit(-1);   
+/*if((batches>1)&&!MPIdata::rank())
+{
+     
+        std::cout << std::fixed;
+        std::cout << std::setprecision(16);
+        std::cout << "Zvec: "<<np2_*nvec_<<std::endl;
+        for(int j=0;j<2;j++)
+        {    
+                cuErr=cudaMemcpy((double*)zvec_.data(), (double*)zvec_device+j*2*np2_*nvec_, sizeof(double)*2*np2_*nvec_ ,cudaMemcpyDeviceToHost);
+                cuda_error_check(cuErr,__FILE__,__LINE__);
 
-
+                for (int i=0;i<1000;i++)
+                        std::cout <<"GPU f ["<<j*np2_*nvec_+i<<"] ="<<zvec_[i]<<"\n";
+        }    
+        fflush(stdout);
+        exit(-1);
+}
+*/
 
    int n[3];
    //From hackathon: n[0]=np2_loc(); n[1]=np1_; n[2]=np0_;
    n[2]=np2_loc(); n[0]=np1_; n[1]=np0_;
-   cuda_do_fft3d (1,n, 1.0, f_device, f_device, planBWD,cuda_stream);
-
-
+   cuda_do_fft3d (1,n, 1.0, f_device, f_device, planBWD,cuda_stream,batches);
 
    if(enable_dtoh){
-   	cuErr = cudaMemcpy((double*) f,f_device, sizeof(double)* 2 * n[0] * n[1] * n[2], cudaMemcpyDeviceToHost);
+   	cuErr = cudaMemcpy((double*) f,f_device, sizeof(double)* 2 * n[0] * n[1] * n[2] * batches, cudaMemcpyDeviceToHost);
    	//cuErr = cudaMemcpyAsync((double*)f, f_device,sizeof(double)*2* n[0] * n[1] * n[2], cudaMemcpyDeviceToHost,cuda_stream);
    	cuda_error_check(cuErr,__FILE__,__LINE__);
-  }
-
-if(!MPIdata::rank())
-{
-
-	std::cout << std::fixed;
-        std::cout << std::setprecision(16);
-	for (int i=0;i< np0_*np1_*np2_loc();i++)
-        	std::cout <<"GPU f ["<<i<<"] ="<<f[i]<<"\n";
-        fflush(stdout);
-}
-
-exit(-1);
-
-
-
+   }
 
 
 #else
+
 #if TIMING
   tm_map_bwd.start();
 #endif
@@ -497,22 +474,6 @@ if(!MPIdata::rank())
 
   bwd(f);
  
-  
-  //DELETE :
-   //bm_.transpose_bwd(&zvec_[0],f);
-
-
-
-if(!MPIdata::rank())
-{
-	std::cout << std::fixed;
-        std::cout << std::setprecision(16);
-	for (int i=0;i< np0_*np1_*np2_loc();i++)
-        	 std::cout <<"CPU f ["<<i<<"] ="<<f[i]<<"\n";
-	fflush(stdout);
-}
-  
-exit(-1);
 
 #endif
   
@@ -1499,9 +1460,9 @@ void FourierTransform::init_lib(void)
   ns[0]=np0_; ns[1]=np1_; ns[2]=np2_loc();
   fftcu_plan3d_z(planFWD,ioverflow,ns);
 
-  cudaMalloc(reinterpret_cast<void**> (&zvec_device), sizeof(double)*2*nvec_*np2_);
-  cudaMalloc(reinterpret_cast<void**> (&f_device),sizeof(double)*2*np0_*np1_*np2_loc());
-  cudaMalloc(reinterpret_cast<void**> (&c_device),sizeof(double)*4*basis_.localsize());
+  cudaMalloc(reinterpret_cast<void**> (&zvec_device), sizeof(double)*2*nvec_*np2_*nbatches);
+  cudaMalloc(reinterpret_cast<void**> (&f_device),sizeof(double)*2*np0_*np1_*np2_loc()*nbatches);
+  cudaMalloc(reinterpret_cast<void**> (&c_device),sizeof(double)*2*basis_.localsize()*nbatches);
   if (cudaGetLastError() != cudaSuccess){
          fprintf(stderr, "Cuda error: Failed to allocate\n");
          return;
