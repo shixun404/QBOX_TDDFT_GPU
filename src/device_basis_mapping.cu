@@ -171,8 +171,8 @@ __global__ void cu_Z_copy(const int count, const double* x, const int offset_x, 
 	for(int i=0; i<n_iters; i++){
 		const int thx=threadIdx.x + i*blockDim.x;
 		if(thx<count){
-			y[dest + 2*incy*thx+blockIdx.y*N_y] = x[src + 2*incx*thx+blockIdx.y*N_x];
-			y[dest + 2*incy*thx + 1+blockIdx.y*N_y] = x[src + 2*incx*thx + 1+blockIdx.y*N_x];
+			y[dest + 2*incy*thx+blockIdx.y*N_y*2] = x[src + 2*incx*thx+blockIdx.y*N_x*2];
+			y[dest + 2*incy*thx + 1+blockIdx.y*N_y*2] = x[src + 2*incx*thx + 1+blockIdx.y*N_x*2];
 		}
 	}	
 
@@ -212,7 +212,7 @@ void cuZcopy(const int count, const double * x, const int offset_x, const int in
 
 //TODO: templated for T type
 template<int unroll>
-__global__ void cu_pairwise(const double* src, double* dest, const int N){
+__global__ void cu_pairwise(const double* src, double* dest, const int N, const int batch){
 
 	const int thx = blockIdx.x*blockDim.x*unroll + threadIdx.x;
 
@@ -222,12 +222,12 @@ __global__ void cu_pairwise(const double* src, double* dest, const int N){
 		if(idx<N)
 		{
 			//Complex by scalar
-			dest[2*idx] = dest[2*idx]*src[idx];
-			dest[2*idx+1]=dest[2*idx+1]*src[idx];
+			dest[2*idx+blockIdx.y*N] = dest[2*idx+blockIdx.y*N]*src[idx];
+			dest[2*idx+1+blockIdx.y*N]=dest[2*idx+1+blockIdx.y*N]*src[idx];
 
 			//Complex by Complex
-			/*dest[2*idx] = dest[2*idx]*src[2*idx]-dest[2*idx+1]*src[2*idx+1];
-			dest[2*idx+1] = dest[2*idx]*src[2*idx+1] + dest[2*idx+1]*src[2*idx] ;*/
+			/*dest[2*idx+blockIdx.y*N] = dest[2*idx+blockIdx.y*N]*src[2*idx]-dest[2*idx+1+blockIdx.y*N]*src[2*idx+1];
+			dest[2*idx+1+blockIdx.y*N] = dest[2*idx+blockIdx.y*N]*src[2*idx+1] + dest[2*idx+1+blockIdx.y*N]*src[2*idx] ;*/
 		}
 	}
 	
@@ -240,11 +240,11 @@ void cuPairwise(const double* src, double* dest, const int N, cudaStream_t strea
         //round-up
         const int block_num=(N+THREADS_PER_BLOCK*UNROLL_FACTOR-1)/(THREADS_PER_BLOCK*UNROLL_FACTOR);
 
-
+	//Check total number of threads/blocks meets architecture requirements
         dim3 threads (THREADS_PER_BLOCK);
-        dim3 blocks (block_num);
+        dim3 blocks (block_num,batch);
 
-        cu_pairwise<UNROLL_FACTOR><<<blocks,threads,0,stream>>>(src,dest,N);
+        cu_pairwise<UNROLL_FACTOR><<<blocks,threads,0,stream>>>(src,dest,N,batch);
         if (cudaGetLastError() != cudaSuccess){
                    fprintf(stderr, "Cuda error cu_pairwise: Failed kernel\n");
                    exit(-1);

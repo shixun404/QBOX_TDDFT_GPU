@@ -680,7 +680,7 @@ void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaSt
     cudaDeviceProp deviceProperties;
     cudaGetDeviceProperties(&deviceProperties, FourierTransform::get_my_dev());
     const unsigned int max_blocks = deviceProperties.maxGridSize[0];
-    cuZcopy(np2_,zvec,np2_,1,ct,1,np0_*np1_,device_zvec_to_val,nvec_,stream,batch,1,max_blocks,zvec_size(),np0_*np1_*np2_loc());
+    cuZcopy(np2_,zvec,np2_,1,ct,1,np0_*np1_,device_zvec_to_val,nvec_,stream,batch,1,max_blocks,zvec_size()/**np2_*/,np0_*np1_*np2_loc());
 
 }
 

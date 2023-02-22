@@ -564,27 +564,64 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
     const int iters = (nstloc()+FourierTransform::get_nbatches()-1)/(FourierTransform::get_nbatches());
     for ( int n = 0; n < iters; n++ )
     {
-	std::cout<<"HELLO\n";
-	ft.backward(c_.cvalptr(n*mloc*FourierTransform::get_nbatches()), NULL, 0, true, false, true, ((n+1)*FourierTransform::get_nbatches()<nstloc())?FourierTransform::get_nbatches():nstloc()-n*FourierTransform::get_nbatches());
-	//cuPairwise(v,ft.get_f_device(),np012loc, 0); //FourierTransform::get_cuda_streams(n%nstreams)
-	//ft.forward(NULL, &ctmp[0],0,false, true,true);
+	const int nbatches = ((n+1)*FourierTransform::get_nbatches()<nstloc())?FourierTransform::get_nbatches():nstloc()-n*FourierTransform::get_nbatches();    
+	ft.backward(c_.cvalptr(n*mloc*FourierTransform::get_nbatches()), NULL, 0, true, false, true, nbatches);
+	
+	cuPairwise(v,ft.get_f_device(),np012loc, 0, nbatches); //FourierTransform::get_cuda_streams(n%nstreams)
+
+if(!MPIdata::rank())
+{
+
+        std::cout << std::fixed;
+        std::cout << std::setprecision(16);
+        for(int j=0;j<2;j++)
+        {
+                cudaMemcpy((double*)tmp, (double*) ft.get_f_device()+j*2*np012loc, sizeof(double)*2*np012loc ,cudaMemcpyDeviceToHost);
+		double* aux = (double*)ctmp;
+		cudaMemcpy((double*)aux, (double*)v, sizeof(double)*1000, cudaMemcpyDeviceToHost);
+                for (int i=0;i<1000;i++)
+                        std::cout <<"GPU f ["<<j*ft.np0()*ft.np1()+i<<"] ="<<tmp[i]<<"\n"<<"V["<<j*ft.np0()*ft.np1()+i<<"] ="<<aux[i]<<"\n";
+        }
+        fflush(stdout);
+}
+	
+	
+        if(n==1)
+		exit(-1);	
+	//ft.forward(NULL, &ctmp[0],0,false, true,true, nbatches);
 	//int len = 2 * mloc;
 	//int inc1 = 1;
 	//double alpha = 1.0;
 	//cublasDaxpy(FourierTransform::get_cublasHandle(), len, &alpha, ft.get_c_device(), inc1, &dcp_device[2*n*mloc], inc1)
     }
+
+
+
+
+
+
 #else
     for (int n=0; n< nstloc();n++)
     {
-	    ft.backward(c_.cvalptr(n*mloc),&tmp[0]);
+	    ft.backward(c_.cvalptr(n*mloc),&tmp[0],0,true,true,true);
 	    #pragma omp parallel for
 	    for ( int i = 0; i < np012loc; i++ )
          	tmp[i] *= v[i];
-	    ft.forward(&tmp[0], &ctmp[0]);
+	   /* ft.forward(&tmp[0], &ctmp[0]);
 	    int len = 2 * mloc;
 	    int inc1 = 1;
 	    double alpha = 1.0;
 	    daxpy(&len,&alpha,(double*)&ctmp[0],&inc1,&dcp[2*n*mloc],&inc1);
+	    */
+	    std::cout << std::fixed;
+    	    std::cout << std::setprecision(16);
+	    if(!MPIdata::rank()){
+               for (int i=0;i<1000;i++)
+			std::cout <<"CPU f ["<<n*ft.np0()*ft.np1()+i<<"] ="<<tmp[i]<<"\n"<<"V["<< n*ft.np0()*ft.np1()+i<<"] ="<<v[i];	    
+		
+	    }
+	    if(n==1)
+		    exit(-1);
     }
 
 #endif
