@@ -5,7 +5,7 @@
 2. Go to ``build/`` and choose one of the existing templates. Customize it to your platform. Within the script, load the fftw/xerces modules or specify their binary paths.
 3. If your build template was named ``template.mk``, then type ``make TARGET=../build/template -j 16`` from the src/ directory.
 
-Note: If you want to execute the GPU version, please checkout to the corresponding branch and use a proper Programming Environment (e.g. ``PrgEnv-nvidia`` in Perlmutter). Also, add "DOPTIMIZE_GPU" to ``template.mk`` and comment the ``-DUSE_FFTW3``flag. Before running the ``make`` command, please compile the GPU code: ``nvcc -c device_basis_mapping.cu
+Note: If you want to execute the GPU version, please checkout to the corresponding branch and use a proper Programming Environment (e.g. ``PrgEnv-nvidia`` in Perlmutter). Also, add "DOPTIMIZE_GPU" to ``template.mk`` and comment the ``-DUSE_FFTW3``flag. Before running the ``make`` command, please compile the GPU code: ``nvcc -c device_basis_mapping.cu``.
 
 ### Installing XERCES locally
 
