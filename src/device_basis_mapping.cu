@@ -7,7 +7,7 @@
 
 
 template <int unroll>
-__global__ void zvec_to_vector_kernel(const double *zvec, double *c, const int* ip_, const int ng)
+__global__ void zvec_to_vector_kernel(const double *zvec, double *c, const int* ip_, const int ng, const int nvecnp2)
 {
 	const int global_id=blockDim.x*blockIdx.x*unroll+threadIdx.x*unroll;
 
@@ -18,15 +18,15 @@ __global__ void zvec_to_vector_kernel(const double *zvec, double *c, const int* 
 		if(id<ng)
 		{
 			const int ip = ip_[id];
-			c[2*id]=zvec[2*ip];
-			c[2*id +1]=zvec[2*ip];
+			c[2*id+2*blockIdx.y*ng]=zvec[2*ip+2*blockIdx.y*nvecnp2];
+			c[2*id +2*blockIdx.y*ng +1]=zvec[2*ip+2*blockIdx.y*nvecnp2+1];
 		}
 	}
 
 
 
 }
-void cuda_zvec_to_vector (const double * zvec, double *c, const int* ip_, const int ng, cudaStream_t stream, const int batch){
+void cuda_zvec_to_vector (const double * zvec, double *c, const int* ip_, const int ng, const int nvecnp2, cudaStream_t stream, const int batch){
 
 	constexpr int THREADS_PER_BLOCK=128;
         constexpr int UNROLL_FACTOR=8;
@@ -35,8 +35,8 @@ void cuda_zvec_to_vector (const double * zvec, double *c, const int* ip_, const 
         const int block_num=(ng+THREADS_PER_BLOCK*UNROLL_FACTOR-1)/(THREADS_PER_BLOCK*UNROLL_FACTOR);
 
         dim3 threads (THREADS_PER_BLOCK);
-        dim3 blocks (block_num);
-        zvec_to_vector_kernel<UNROLL_FACTOR><<<blocks,threads,0,stream>>>(zvec,c,ip_,ng);
+        dim3 blocks (block_num, batch);
+        zvec_to_vector_kernel<UNROLL_FACTOR><<<blocks,threads,0,stream>>>(zvec,c,ip_,ng,nvecnp2);
 
 }
 
@@ -53,8 +53,8 @@ template<> struct Copy<0>{
         static inline __device__ void
         copy(double* dst, const double* src, const int *ip, const int *im, const int id, const int n, const int n2){
                 const int index = ip[id];
-		dst[2*index+blockIdx.y*n2]=src[2*id+blockIdx.y*n];
-		dst[2*index+1+blockIdx.y*n2]=src[2*id+1+blockIdx.y*n];
+		dst[2*index+2*blockIdx.y*n2]=src[2*id+2*blockIdx.y*n];
+		dst[2*index+1+2*blockIdx.y*n2]=src[2*id+1+2*blockIdx.y*n];
    	}
 };
 
@@ -66,11 +66,11 @@ template<> struct Copy<1>{
                 const int indexp = ip[id];
                 const int indexm = im[id];
 
-		dst[2*indexp+blockIdx.y*n2]=src[2*id+blockIdx.y*n];
-                dst[2*indexp+1+blockIdx.y*n2]=src[2*id+1+blockIdx.y*n];
+		dst[2*indexp+2*blockIdx.y*n2]=src[2*id+2*blockIdx.y*n];
+                dst[2*indexp+1+2*blockIdx.y*n2]=src[2*id+1+2*blockIdx.y*n];
 
-		dst[2*indexm+blockIdx.y*n2]=src[2*id+blockIdx.y*n];
-		dst[2*indexm+1+blockIdx.y*n2]=-src[2*id+1+blockIdx.y*n];
+		dst[2*indexm+2*blockIdx.y*n2]=src[2*id+2*blockIdx.y*n];
+		dst[2*indexm+1+2*blockIdx.y*n2]=-src[2*id+1+2*blockIdx.y*n];
         }
 };
 
@@ -211,6 +211,7 @@ void cuZcopy(const int count, const double * x, const int offset_x, const int in
 /********************************************/
 
 //TODO: templated for T type
+
 template<int unroll>
 __global__ void cu_pairwise(const double* src, double* dest, const int N, const int batch){
 
@@ -222,12 +223,12 @@ __global__ void cu_pairwise(const double* src, double* dest, const int N, const 
 		if(idx<N)
 		{
 			//Complex by scalar
-			dest[2*idx+blockIdx.y*N] = dest[2*idx+blockIdx.y*N]*src[idx];
-			dest[2*idx+1+blockIdx.y*N]=dest[2*idx+1+blockIdx.y*N]*src[idx];
+			dest[2*idx+2*blockIdx.y*N] = dest[2*idx+2*blockIdx.y*N]*src[idx];
+			dest[2*idx+1+2*blockIdx.y*N]=dest[2*idx+1+2*blockIdx.y*N]*src[idx];
 
 			//Complex by Complex
-			/*dest[2*idx+blockIdx.y*N] = dest[2*idx+blockIdx.y*N]*src[2*idx]-dest[2*idx+1+blockIdx.y*N]*src[2*idx+1];
-			dest[2*idx+1+blockIdx.y*N] = dest[2*idx+blockIdx.y*N]*src[2*idx+1] + dest[2*idx+1+blockIdx.y*N]*src[2*idx] ;*/
+			/*dest[2*idx+2*blockIdx.y*N] = dest[2*idx+2*blockIdx.y*N]*src[2*idx]-dest[2*idx+1+2*blockIdx.y*N]*src[2*idx+1];
+			dest[2*idx+1+2*blockIdx.y*N] = dest[2*idx+2*blockIdx.y*N]*src[2*idx+1] + dest[2*idx+1+2*blockIdx.y*N]*src[2*idx] ;*/
 		}
 	}
 	
@@ -256,7 +257,51 @@ void cuPairwise(const double* src, double* dest, const int N, cudaStream_t strea
 
 
 
+/**************************/
 
+
+
+//TODO: templated for T type
+template<int unroll>
+__global__ void cu_dscal(const double scal, double* dest, const int N, const int batch){
+
+        const int thx = blockIdx.x*blockDim.x*unroll + threadIdx.x;
+
+        for(int i=0;i<unroll;i++)
+        {
+                const int idx = thx+i*blockDim.x;
+                if(idx<N)
+                {
+                        //Complex by scalar
+                        dest[idx+blockIdx.y*N] = dest[idx+blockIdx.y*N]*scal;
+
+                }
+        }
+
+}
+
+
+
+
+void cuDscal(const double scal, double * dest, const int N, cudaStream_t stream, const int batch){
+
+	constexpr int THREADS_PER_BLOCK=128;
+        constexpr int UNROLL_FACTOR=8;
+
+        //round-up
+        const int block_num=(N+THREADS_PER_BLOCK*UNROLL_FACTOR-1)/(THREADS_PER_BLOCK*UNROLL_FACTOR);
+
+        //Check total number of threads/blocks meets architecture requirements
+        dim3 threads (THREADS_PER_BLOCK);
+        dim3 blocks (block_num,batch);
+
+        cu_dscal<UNROLL_FACTOR><<<blocks,threads,0,stream>>>(scal,dest,N,batch);
+        if (cudaGetLastError() != cudaSuccess){
+                   fprintf(stderr, "Cuda error cu_pairwise: Failed kernel\n");
+                   exit(-1);
+        }
+
+}
 
 
 

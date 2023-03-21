@@ -38,6 +38,7 @@
 #if OPTIMIZE_GPU 
 #include "cufft.h"
 #include "my_cuda_utils.h"
+#include "device_basis_mapping.h"
 #endif
 
 //TODO: Delete these two headers
@@ -87,6 +88,8 @@ extern "C" {
 void cfftm ( std::complex<double> *ain, std::complex<double> *aout,
   double scale, int ntrans, int length, int ainc, int ajmp, int idir );
 #elif OPTIMIZE_GPU
+void cfftm ( std::complex<double> *ain, std::complex<double> *aout,
+  double scale, int ntrans, int length, int ainc, int ajmp, int idir );
 #else
 #error "Must define USE_FFTW2, USE_FFTW3, USE_ESSL_FFT or FFT_NOLIB"
 #endif
@@ -149,6 +152,7 @@ void FourierTransform::cuda_do_fft3d( const int                 fsign,
   lmem = n[0] * n[1] * n[2];
 
   if ( fsign > 0  ) {
+    	  
     cErr = cufftExecZ2Z(plan, (cufftDoubleComplex*)data,(cufftDoubleComplex*) data2, CUFFT_INVERSE);
     cufft_error_check(cErr, __LINE__);
   }
@@ -161,19 +165,23 @@ void FourierTransform::cuda_do_fft3d( const int                 fsign,
   if (scale != 1.0e0) {
   //  cuErr = cudaStreamSynchronize(cuda_streams[0]); //TODO: Remove when CUBLAS in non-default stream
   //  cuda_error_check(cuErr,__FILE__, __LINE__);
-      cublasStatus_t stat = cublasSetStream(FourierTransform::get_cublasHandle(), cuda_stream); //TODO: Ensure it is passed by reference?
+      /*
+       cublasStatus_t stat = cublasSetStream(FourierTransform::get_cublasHandle(), cuda_stream); //TODO: Ensure it is passed by reference?
       if (stat!=cudaSuccess){
         	fprintf(stderr,"Failed to assign stream to handle - CUBLAS\n");
         	fflush(stderr);
        		exit(-1); // TODO: Launch exception better
       }    
       cublasDscal(handle,2*lmem, &scale, (double *) data2, 1);
+      */
+      cuDscal(scale,(double*) data2, 2*lmem, cuda_stream, batches);	
+	  //TODO: Replace with my batched cuPairwise
   }
 
 
 }
 
-cublasHandle_t FourierTransform::handle;
+//cublasHandle_t FourierTransform::handle;
 
 #endif
 
@@ -258,6 +266,12 @@ FourierTransform::~FourierTransform()
   cErr = cufftDestroy(planBWD);
   cufft_error_check(cErr, __LINE__);
 
+  if(FourierTransform::get_nbatches()>1){
+  	cErr=cufftDestroy(planBWDbatch);
+  	cufft_error_check(cErr, __LINE__);
+  	cErr=cufftDestroy(planFWDbatch);
+  	cufft_error_check(cErr, __LINE__);
+  }
 
   cudaFree(zvec_device);
   cudaFree(f_device);
@@ -279,10 +293,10 @@ cudaStream_t* FourierTransform::cuda_streams;
 
 
 ////////////////////////////////////////////////////////////////////////////////
-void FourierTransform::forward(complex<double>* f, complex<double>* c, cudaStream_t cuda_stream, bool enable_htod, bool enable_dtoh, bool gpu)
+void FourierTransform::forward(complex<double>* f, complex<double>* c, cudaStream_t cuda_stream, bool enable_htod, bool enable_dtoh, bool gpu, int batches)
 {
 
-/*
+
 #if OPTIMIZE_GPU
 	cudaError_t cuErr;
 
@@ -291,28 +305,29 @@ void FourierTransform::forward(complex<double>* f, complex<double>* c, cudaStrea
 
 	if(enable_htod){
 		const double* const pf = (double*) f;
-		cuErr=cudaMemcpy(f_device,pf,sizeof(double)* 2 * n[0] * n[1] * n[2],cudaMemcpyHostToDevice);
+		cuErr=cudaMemcpy(f_device,pf,sizeof(double)* 2 * n[0] * n[1] * n[2]*batches,cudaMemcpyHostToDevice);
 		//cuErr=cudaMemcpyAsync(f_device,pf,sizeof(double)* 2 * n[0] * n[1] * n[2],cudaMemcpyHostToDevice,cuda_stream);
 		cuda_error_check(cuErr,__FILE__,__LINE__);	
 	}
 
+	if(batches==1)
+		cuda_do_fft3d(-1, n, 1.0/np012(), f_device, f_device,planFWD,cuda_stream,batches);
+	else
+		cuda_do_fft3d(-1, n, 1.0/np012(), f_device, f_device, planFWDbatch, cuda_stream, batches);
 
-	//Not sure about the order. Is it necessary to scale?
-	cuda_do_fft3d(-1, n, 1.0, f_device, f_device,planFWD,cuda_stream);
-
-	bm_.device_transpose_fwd(f_device, zvec_device,cuda_stream);
+	bm_.device_transpose_fwd(f_device, zvec_device,cuda_stream,batches);
         #if TIMING
 	tm_map_fwd.start();
 	#endif
 	
-	bm_.device_zvec_to_vector(zvec_device,c_device,cuda_stream);
+	bm_.device_zvec_to_vector(zvec_device,c_device,cuda_stream,batches);
 	
 	#if TIMING
 	tm_map_fwd.stop();	
 	#endif
 	if(enable_dtoh)
 	{
-		cuErr=cudaMemcpy((double*) c, c_device,sizeof(double)*2*basis_.localsize(),cudaMemcpyDeviceToHost);
+		cuErr=cudaMemcpy((double*) c, c_device,sizeof(double)*2*basis_.localsize()*batches,cudaMemcpyDeviceToHost);
 		//cuErr=cudaMemcpyAsync((double*)&c[0],c_device,sizeof(double)*2*basis_.localsize(),cudaMemcpyDeviceToHost, cuda_stream);
 		//cudaStreamSynchronize(cuda_stream);
 		cuda_error_check(cuErr, __FILE__, __LINE__);
@@ -336,7 +351,7 @@ void FourierTransform::forward(complex<double>* f, complex<double>* c, cudaStrea
 
 
 #endif
-*/
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -353,8 +368,7 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f, cu
    cudaError_t cuErr;
 
    if(enable_htod){
-  	const double* const pc = (double*)c;
-	cuErr=cudaMemcpy(c_device,pc,sizeof(double)*2*basis_.localsize()*batches,cudaMemcpyHostToDevice);
+	cuErr=cudaMemcpy(c_device,(double*)c,sizeof(double)*2*basis_.localsize()*batches,cudaMemcpyHostToDevice);
   	//cuErr=cudaMemcpyAsync(c_device,pc, sizeof(double)*2*basis_.localsize(),cudaMemcpyHostToDevice,cuda_stream);
   	cuda_error_check(cuErr, __FILE__,__LINE__);
    }
@@ -373,8 +387,16 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f, cu
    int n[3];
    //From hackathon: n[0]=np2_loc(); n[1]=np1_; n[2]=np0_;
    n[2]=np2_loc(); n[0]=np1_; n[1]=np0_;
-   //cuda_do_fft3d (1,n, 1.0, f_device, f_device, planBWD,cuda_stream,batches);
-   
+  
+   if(batches==1)
+   	cuda_do_fft3d (1,n, 1.0, f_device, f_device, planBWD,cuda_stream,batches);
+   else
+	cuda_do_fft3d (1,n, 1.0, f_device, f_device, planBWDbatch, cuda_stream, batches);
+
+
+
+
+
    if(enable_dtoh){
    	cuErr = cudaMemcpy((double*) f,f_device, sizeof(double)* 2 * n[0] * n[1] * n[2] * batches, cudaMemcpyDeviceToHost);
    	//cuErr = cudaMemcpyAsync((double*)f, f_device,sizeof(double)*2* n[0] * n[1] * n[2], cudaMemcpyDeviceToHost,cuda_stream);
@@ -394,16 +416,10 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f, cu
   tm_map_bwd.stop();
 #endif
 
-  //bwd(f);
+  bwd(f);
+//BORRAR
+//bm_.transpose_bwd(&zvec_[0],f); 
   
-  //BORRAR:
-  bm_.transpose_bwd(&zvec_[0],f);
-  
-  
-  
-  return;  
- 
-
 #endif
   
 }
@@ -700,7 +716,7 @@ void FourierTransform::fxy(complex<double>* val)
                         (FFTW_COMPLEX*)0,0,0);
 #endif // _OPENMP
   } // k
-#elif defined(FFT_NOLIB)
+#elif defined(FFT_NOLIB) || defined(OPTIMIZE_GPU)
   // No library
   for ( int k = 0; k < np2_loc(); k++ )
   {
@@ -727,7 +743,6 @@ void FourierTransform::fxy(complex<double>* val)
     istart = np0_ * ( (np1_-ntrans) + k * np1_ );
     cfftm (&val[istart],&val[istart],scale,ntrans,length,ainc,ajmp,idir );
   } // for k
-#elif defined(OPTIMIZE_GPU)
 
 #else
 #error "Must define USE_FFTW2, USE_FFTW3, USE_ESSL_FFT or FFT_NOLIB"
@@ -922,7 +937,7 @@ void FourierTransform::fxy_inv(complex<double>* val)
                         (FFTW_COMPLEX*)0,0,0);
 #endif // _OPENMP
   } // k
-#elif defined(FFT_NOLIB) // USE_FFTW2
+#elif defined(FFT_NOLIB) || defined(OPTIMIZE_GPU) // USE_FFTW2
   // No library
   for ( int k = 0; k < np2_loc(); k++ )
   {
@@ -951,7 +966,6 @@ void FourierTransform::fxy_inv(complex<double>* val)
     ajmp = 1;
     cfftm (&val[istart],&val[istart],scale,ntrans,length,ainc,ajmp,idir );
   } // for k
-#elif defined(OPTIMIZE_GPU)
 
 #else
 #error "Must define USE_FFTW2, USE_FFTW3, USE_ESSL_FFT or FFT_NOLIB"
@@ -1028,7 +1042,7 @@ void FourierTransform::fz(void)
   int len = zvec_.size();
   int inc1 = 1;
   zdscal(&len,&fac,&zvec_[0],&inc1);
-#elif defined(FFT_NOLIB)
+#elif defined(FFT_NOLIB) || defined(OPTIMIZE_GPU)
   // No library
   /* Transform along z */
   int ntrans = nvec_;
@@ -1038,7 +1052,6 @@ void FourierTransform::fz(void)
   double scale = 1.0 / np012();
   int idir = 1;
   cfftm ( &zvec_[0], &zvec_[0], scale, ntrans, length, ainc, ajmp, idir );
-#elif defined(OPTIMIZE_GPU)
 
 #else
 #error "Must define USE_FFTW2, USE_FFTW3, USE_ESSL_FFT or FFT_NOLIB"
@@ -1095,7 +1108,7 @@ void FourierTransform::fz_inv(void)
   }
 #endif // USE_FFTW3_THREADS
 
-#elif defined(FFT_NOLIB) // USE_FFTW3
+#elif defined(FFT_NOLIB) || defined(OPTIMIZE_GPU) // USE_FFTW3
   // No library
   /* Transform along z */
   int ntrans = nvec_;
@@ -1105,7 +1118,6 @@ void FourierTransform::fz_inv(void)
   double scale = 1.0;
   int idir = -1;
   cfftm ( &zvec_[0], &zvec_[0], scale, ntrans, length, ainc, ajmp, idir );
-#elif defined(OPTIMIZE_GPU)
 
 #else
 #error "Must define USE_FFTW2, USE_FFTW3, USE_ESSL_FFT or FFT_NOLIB"
@@ -1367,13 +1379,13 @@ void FourierTransform::init_lib(void)
 	}
 */
 	//CUBLAS implementation	
-	cublasStatus_t stat = cublasCreate(&handle); 
+/*	cublasStatus_t stat = cublasCreate(&handle); 
     	if(stat!= CUBLAS_STATUS_SUCCESS){
         	fprintf(stderr,"CUBLAS initialization failed\n");
         	fflush(stderr);
         	exit(-1);
     	} 
-       	
+*/       	
 	//nvtxRangePop();
   }
 
@@ -1381,25 +1393,33 @@ void FourierTransform::init_lib(void)
 
   const int lmem = np0_ * np1_ * np2_;
   cufftResult_t cErr;
-
-  //Hackathon: ns[0]=np2_loc(); ns[1]=np1_; ns[2]=np0_;
-  cErr = cufftPlan3d(&planBWD, np1_, np0_, np2_loc(), CUFFT_Z2Z);
+  const int batches = FourierTransform::get_nbatches();
+  cErr = cufftPlan3d(&planBWD, np2_loc(), np1_, np0_, CUFFT_Z2Z);
+  cufft_error_check(cErr, __LINE__);
+  int n[3]; n[0]=np2_; n[1]=np1_, n[2]=np0_;
+  int in[3]; in[0]=n[0]; in[1]=n[1]; in[2]=n[2];
+  int out[3]; out[0]=n[0]; out[1]=n[1]; out[2]=n[2];
+  if(batches>1)
+  	cErr = cufftPlanMany(&planBWDbatch,3,n,in, 1, lmem, out, 1, lmem, CUFFT_Z2Z, batches);
   cufft_error_check(cErr,__LINE__);
   #if(__CUDACC_VER_MAJOR__<8)
   cErr=cufftSetCompatibilityMode(plan, FFT_ALIGNMENT); 
   cufft_error_check(cErr,__LINE__);
   #endif
   
-  cErr= cufftPlan3d(&planFWD,np1_, np0_, np2_loc() , CUFFT_Z2Z);
+  cErr= cufftPlan3d(&planFWD,np2_loc(), np1_, np0_ , CUFFT_Z2Z);
+  cufft_error_check(cErr,__LINE__);
+  if(batches>1)
+  	cErr = cufftPlanMany(&planFWDbatch, 3, n, NULL, 1, 0,NULL, 1, 0, CUFFT_Z2Z, batches);
   cufft_error_check(cErr,__LINE__);
   #if(__CUDACC_VER_MAJOR__<8)
   cErr=cufftSetCompatibilityMode(plan, FFT_ALIGNMENT);
   cufft_error_check(cErr,__LINE__);
   #endif
 
-  cudaMalloc(reinterpret_cast<void**> (&zvec_device), sizeof(double)*2*nvec_*np2_*nbatches);
-  cudaMalloc(reinterpret_cast<void**> (&f_device),sizeof(double)*2*np0_*np1_*np2_loc()*nbatches);
-  cudaMalloc(reinterpret_cast<void**> (&c_device),sizeof(double)*2*basis_.localsize()*nbatches);
+  cudaMalloc(reinterpret_cast<void**> (&zvec_device), sizeof(double)*2*nvec_*np2_*batches);
+  cudaMalloc(reinterpret_cast<void**> (&f_device),sizeof(double)*2*np0_*np1_*np2_loc()*batches);
+  cudaMalloc(reinterpret_cast<void**> (&c_device),sizeof(double)*2*basis_.localsize()*batches);
   if (cudaGetLastError() != cudaSuccess){
          fprintf(stderr, "Cuda error: Failed to allocate\n");
          return;
@@ -1417,7 +1437,7 @@ void FourierTransform::init_lib(void)
 #endif
 }
 
-#if defined(FFT_NOLIB)
+#if defined(FFT_NOLIB) || defined(OPTIMIZE_GPU)
 
 ////////////////////////////////////////////////////////////////////////////////
 //

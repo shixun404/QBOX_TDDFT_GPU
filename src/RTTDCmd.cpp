@@ -142,12 +142,12 @@ int RTTDCmd::action(int argc, char **argv)
   //if ( atomic_density )
   stepper->initialize_density();
 
-//ADRIAN ADDED JUST FOR TESTING  
 
   s->wf.info(cout,"wavefunction");
   stepper->step(0);
 
 //ADRIAN ADDED JUST FOR TESTING
+//exit(-1);
 
   if ( s->wfv != 0) delete s->wfv;
   s->wfv = 0;

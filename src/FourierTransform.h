@@ -64,7 +64,7 @@ class FourierTransform
   static int my_dev;
   static cudaStream_t* cuda_streams;
   static const int nstreams =4; //THIS IS A PERFORMANCE PARAMETER
-  static cublasHandle_t handle;
+  //static cublasHandle_t handle;
   static const int nbatches=4; //THISIS A PERFORMANCE PARAMETER
   double * c_device;
   double * zvec_device;
@@ -95,6 +95,8 @@ class FourierTransform
 #if OPTIMIZE_GPU
   cufftHandle planFWD;
   cufftHandle planBWD;
+  cufftHandle planFWDbatch;
+  cufftHandle planBWDbatch;
 #elif USE_ESSL_FFT
 #if USE_ESSL_2DFFT
   std::vector<double> aux1xyf,aux1zf;
@@ -149,7 +151,7 @@ class FourierTransform
   static int get_my_dev(){return my_dev;}
   static int get_nbatches(){return nbatches;}
   //CUBLAS IMPLEMENTATION
-  static cublasHandle_t & get_cublasHandle(){return handle;}
+//  static cublasHandle_t & get_cublasHandle(){return handle;}
   
   
   double* get_f_device() {return f_device;}
@@ -183,7 +185,7 @@ class FourierTransform
 
 
   // Note: forward transforms overwrite the array f
-  void forward(std::complex<double>* f, std::complex<double>* c, cudaStream_t cuda_stream=0, bool enable_htod = true, bool enable_dtoh = true, bool gpu = false);
+  void forward(std::complex<double>* f, std::complex<double>* c, cudaStream_t cuda_stream=0, bool enable_htod = true, bool enable_dtoh = true, bool gpu = false, const int batches=1);
 
   // double transforms: c1 + i*c2 -> f, f -> c1 + i*c2
   void backward (const std::complex<double>* c1,

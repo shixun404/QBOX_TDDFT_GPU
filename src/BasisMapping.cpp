@@ -219,7 +219,7 @@ BasisMapping::BasisMapping (const Basis &basis, int np0, int np1, int np2, int n
     //pw_cuda_error_check(cuErr, __LINE__);
 
     ip_=(int*)malloc(basis_.localsize()*sizeof(int));
-
+    im_=NULL;
 #else   
     ip_.resize(basis_.localsize());
 #endif
@@ -610,9 +610,10 @@ int BasisMapping::allocate_device( cudaStream_t stream){
     //cudaError_t cuErr=cudaMemcpyAsync(ip_device, ip_, sizeof(int)*basis_.localsize(),cudaMemcpyHostToDevice, stream);
     cuda_error_check(cuErr,__FILE__,__LINE__);
     
-    cuErr=cudaMemcpy(im_device, im_, sizeof(int)*basis_.localsize(),cudaMemcpyHostToDevice);
-    cuda_error_check(cuErr,__FILE__,__LINE__);
-
+    if(im_){
+    	cuErr=cudaMemcpy(im_device, im_, sizeof(int)*basis_.localsize(),cudaMemcpyHostToDevice);
+    	cuda_error_check(cuErr,__FILE__,__LINE__);
+    }
     cuErr=cudaMemcpy(device_zvec_to_val, zvec_to_val_.data(), sizeof(int)*nvec_,cudaMemcpyHostToDevice);
     cuda_error_check(cuErr,__FILE__,__LINE__);
 
@@ -642,6 +643,8 @@ BasisMapping::~BasisMapping()
 	}
 
         free(ip_);
+	if(im_)
+		free(im_);
 }
 
 void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaStream_t stream, const int batch) const
@@ -650,36 +653,10 @@ void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaSt
 //  cudaMemsetAsync(ct,0,np012loc_*2*sizeof(double),stream);
     cudaMemset(ct, 0, np012loc_*2*batch*sizeof(double));
     cuda_check_last(__FILE__,__LINE__);
-   
-   //CUBLAS IMPLEMENTATION
-    /* cublasStatus_t stat = cublasSetStream(FourierTransform::get_cublasHandle(), stream); //TODO: Ensure it is passed by reference?
-    if (stat!=cudaSuccess){
-    	printf("Failed to assign stream to handle - CUBLAS\n");
-	fflush(stdout);
-	exit(-1); // TODO: Launch exception better
-    }
-    for ( int ivec = 0; ivec < nvec_; ivec++ )
-   {
-        int src = ivec*np2_;
-        int dest = zvec_to_val_[ivec]; //bring to GPU in constructor?CHECK if it is modified later
-
-        int incx=1;
-        int incy=np0_*np1_;
-        int count= np2_;
-
-        cuDoubleComplex * x = (cuDoubleComplex *) (zvec + src*2);
-        cuDoubleComplex * y = (cuDoubleComplex *) (ct + dest*2);
-
-        //cudaStreamSynchronize(stream); // Remove this when cuBLAS works with the  non-default stream
-   	
-   	cublasZcopy(FourierTransform::get_cublasHandle(), count,x, incx, y, incy);
-   }
-   */
-
     //CUSTOM IMPLEMENTATION
-    cudaDeviceProp deviceProperties;
-    cudaGetDeviceProperties(&deviceProperties, FourierTransform::get_my_dev());
-    const unsigned int max_blocks = deviceProperties.maxGridSize[0];
+    //cudaDeviceProp deviceProperties;
+    //cudaGetDeviceProperties(&deviceProperties, FourierTransform::get_my_dev());
+    const unsigned int max_blocks = 2147483647; //deviceProperties.maxGridSize[0];
     cuZcopy(np2_,zvec,np2_,1,ct,1,np0_*np1_,device_zvec_to_val,nvec_,stream,batch,1,max_blocks,zvec_size()/**np2_*/,np0_*np1_*np2_loc());
 
 }
@@ -1133,7 +1110,7 @@ void BasisMapping::doublevector_to_zvec(const complex<double> *c1,
 void BasisMapping::device_zvec_to_vector(const double * zvec, double * c, cudaStream_t stream, const int batch) const
 {
 	const int ng= basis_.localsize();
-	cuda_zvec_to_vector(zvec,c,ip_device,ng,stream);
+	cuda_zvec_to_vector(zvec,c,ip_device,ng,zvec_size(), stream,batch);
 }
 
 #endif

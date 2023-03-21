@@ -7,8 +7,10 @@ void cuda_vector_to_zvec (const double *c,
 void cuZcopy(const int count, const double * x, const int offset_x,const int incx, double * y, const int  offset_y, const int incy, const int * offset, const int batchesX, cudaStream_t stream, const int batchY, const int PLAN, const int max_blocks,const int n1, const int n2);
 
 
-void cuda_zvec_to_vector(const double * zvec, double *c, const int* ip_, const int ng, cudaStream_t stream, const int batch=1);
+void cuda_zvec_to_vector(const double * zvec, double *c, const int* ip_, const int ng, const int nvecnp2, cudaStream_t stream, const int batch=1);
 
 void cuPairwise(const double* src, double* dest, const int N, cudaStream_t stream, const int batch=1);
+
+void cuDscal(const double scal, double* dest, const int N, cudaStream_t stream, const int batch=1);
 
 #endif

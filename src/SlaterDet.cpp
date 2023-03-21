@@ -27,7 +27,7 @@
 #include "my_cuda_utils.h"
 #include "device_basis_mapping.h"
 #endif
-
+#include <chrono> //TODO: Remove
 #include <cstdlib>
 #include <cstring> // memcpy
 #include <iostream>
@@ -461,17 +461,20 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
 
 #if OPTIMIZE_GPU
   int nstreams=FourierTransform::get_nstreams();
-
+#endif
 /*
   //TODO: Check if mloc() changes across invocations. Otherwise, allocate in constructor only once
   complex<double> *ctmp, *tmp;
   cudaMallocHost(reinterpret_cast<void**>(&ctmp), 4*c_.mloc()*sizeof(double));
-  cuda_check_last(__FILE__,__LINE__);  
-*/  
 #endif
+*/
 
-  //TODO: Pending to check if ctmp needs to be reallocated for BATCHED times
+#if OPTIMIZE_GPU
+  //TODO: Remove this after complete batch execution
+  complex<double>* ctmp = (complex<double>*) malloc(FourierTransform::get_nbatches()*c_.mloc()*sizeof(complex<double>));
+#else  
   complex<double>* ctmp = (complex<double>*) malloc(c_.mloc()*sizeof(complex<double>));
+#endif  
   complex<double>* tmp = (complex<double>*) malloc(ft.np012loc()*sizeof(complex<double>));
 
   if(!ctmp){
@@ -559,82 +562,124 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
  
 #endif
   if(execute){
+//CONSTRAINT: NUMBER OF NBATCHES MUST BE A DIVISOR OF nstloc(). The reason is the FFT Plan creation, where we set the number of batches and the data layout. 
+
+
+
 
 #if OPTIMIZE_GPU
+    assert((nstloc()%FourierTransform::get_nbatches())==0);
     const int iters = (nstloc()+FourierTransform::get_nbatches()-1)/(FourierTransform::get_nbatches());
+    
+  //  chrono::steady_clock::time_point  start=std::chrono::steady_clock::now();
     for ( int n = 0; n < iters; n++ )
     {
 	const int nbatches = ((n+1)*FourierTransform::get_nbatches()<nstloc())?FourierTransform::get_nbatches():nstloc()-n*FourierTransform::get_nbatches();    
-	ft.backward(c_.cvalptr(n*mloc*FourierTransform::get_nbatches()), NULL, 0, true, false, true, nbatches);
-	
-	cuPairwise(v,ft.get_f_device(),np012loc, 0, nbatches); //FourierTransform::get_cuda_streams(n%nstreams)
+	ft.backward(c_.cvalptr(n*mloc*FourierTransform::get_nbatches()), &tmp[0], 0, true, false, true, nbatches);
+        cuPairwise(v,ft.get_f_device(),np012loc, 0, nbatches); //FourierTransform::get_cuda_streams(n%nstreams)	
+	ft.forward(NULL, &ctmp[0],0,false, true,true, nbatches);
+	for(int i=0;i<nbatches;i++)
+	{
+		double* ctmpd = (double*) ctmp;
+		double* dcpd = (double*) dcp;
+		int len = 2 * mloc;
+        	int inc1 = 1;
+        	double alpha = 1.0;
+        	//cublasDaxpy(FourierTransform::get_cublasHandle(), len, &alpha, ft.get_c_device(), inc1, &dcp_device[2*n*mloc], inc1)
+		daxpy(&len,&alpha,&ctmpd[i*2*mloc],&inc1,&dcpd[2*n*mloc*FourierTransform::get_nbatches()+i*2*mloc],&inc1);
+  	}
+    }
 
+/*
+    chrono::steady_clock::time_point end=std::chrono::steady_clock::now();
+    MPI_Barrier(MPIdata::comm());
+if(!MPIdata::rank()){
+	std::cout<<"The GPU execution took "<<std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(     ) <<std::endl;  
+}
+    */  
+/*
+	
 if(!MPIdata::rank())
 {
-
         std::cout << std::fixed;
         std::cout << std::setprecision(16);
         for(int j=0;j<2;j++)
         {
-                cudaMemcpy((double*)tmp, (double*) ft.get_f_device()+j*2*np012loc, sizeof(double)*2*np012loc ,cudaMemcpyDeviceToHost);
-		double* aux = (double*)ctmp;
-		cudaMemcpy((double*)aux, (double*)v, sizeof(double)*1000, cudaMemcpyDeviceToHost);
-                for (int i=0;i<1000;i++)
-                        std::cout <<"GPU f ["<<j*ft.np0()*ft.np1()+i<<"] ="<<tmp[i]<<"\n"<<"V["<<j*ft.np0()*ft.np1()+i<<"] ="<<aux[i]<<"\n";
-        }
+                for (int i=0;i<2*mloc;i++)
+			std::cout <<j<<";"<<i<<";"<<dcp[2*n*mloc*FourierTransform::get_nbatches()+j*2*mloc+i]<<"\n";
+                        //std::cout <<j<<";"<<i<<";"<<ctmp[j*mloc+i].real()<<";"<<ctmp[j*mloc+i].imag()<<"\n";
+
+	}
         fflush(stdout);
 }
-	
-	
-        if(n==1)
-		exit(-1);	
-	//ft.forward(NULL, &ctmp[0],0,false, true,true, nbatches);
-	//int len = 2 * mloc;
-	//int inc1 = 1;
-	//double alpha = 1.0;
-	//cublasDaxpy(FourierTransform::get_cublasHandle(), len, &alpha, ft.get_c_device(), inc1, &dcp_device[2*n*mloc], inc1)
-    }
-
-
-
-
+*/	
 
 
 #else
+  //  auto start=chrono::steady_clock::now();
     for (int n=0; n< nstloc();n++)
     {
 	    ft.backward(c_.cvalptr(n*mloc),&tmp[0],0,true,true,true);
+	    
 	    #pragma omp parallel for
 	    for ( int i = 0; i < np012loc; i++ )
          	tmp[i] *= v[i];
-	   /* ft.forward(&tmp[0], &ctmp[0]);
+	    ft.forward(&tmp[0], &ctmp[0]);
 	    int len = 2 * mloc;
 	    int inc1 = 1;
 	    double alpha = 1.0;
+	    
 	    daxpy(&len,&alpha,(double*)&ctmp[0],&inc1,&dcp[2*n*mloc],&inc1);
-	    */
+	    
+
+	    /*
 	    std::cout << std::fixed;
     	    std::cout << std::setprecision(16);
 	    if(!MPIdata::rank()){
-               for (int i=0;i<1000;i++)
-			std::cout <<"CPU f ["<<n*ft.np0()*ft.np1()+i<<"] ="<<tmp[i]<<"\n"<<"V["<< n*ft.np0()*ft.np1()+i<<"] ="<<v[i];	    
-		
+               if(n==1)
+		 {
+		 for (int i=0;i<mloc;i++)
+			std::cout <<n<<";"<<i<<";"<<ctmp[i].real()<<";"<<ctmp[i].imag()<<std::endl;	    
+	         } 
 	    }
-	    if(n==1)
-		    exit(-1);
+	    */
     }
+/*
+    chrono::steady_clock::time_point end=std::chrono::steady_clock::now();
+    MPI_Barrier(MPIdata::comm());
+if(!MPIdata::rank())
+	std::cout<<"The CPU execution took "<<std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() <<std::endl;        
+*/
+
 
 #endif
+
    }
  }
-/*
-#if OPTIMIZE_GPU
-  cudaFreeHost(ctmp);
-  cuda_check_last(__FILE__,__LINE__);
-#endif
-*/
   free(tmp);
   free(ctmp);
+/*
+if(!MPIdata::rank())
+{
+        std::cout << std::fixed;
+        std::cout << std::setprecision(16);
+        for(int j=0;j<2;j++)
+        {
+                for (int i=0;i<100;i++)
+                        std::cout <<j<<";"<<i<<";"<<dcp[j*2*mloc+i]<<"\n";
+                        
+        }
+        fflush(stdout);
+}
+*/
+
+//MPI_Barrier(MPIdata::comm());
+//exit(-1);
+
+
+
+
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
