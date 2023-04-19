@@ -566,12 +566,11 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
 
 
 
-
 #if OPTIMIZE_GPU
     assert((nstloc()%FourierTransform::get_nbatches())==0);
     const int iters = (nstloc()+FourierTransform::get_nbatches()-1)/(FourierTransform::get_nbatches());
     
-  //  chrono::steady_clock::time_point  start=std::chrono::steady_clock::now();
+    //chrono::steady_clock::time_point  start=std::chrono::steady_clock::now();
     for ( int n = 0; n < iters; n++ )
     {
 	const int nbatches = ((n+1)*FourierTransform::get_nbatches()<nstloc())?FourierTransform::get_nbatches():nstloc()-n*FourierTransform::get_nbatches();    
@@ -590,13 +589,13 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
   	}
     }
 
-/*
-    chrono::steady_clock::time_point end=std::chrono::steady_clock::now();
+
+/*    chrono::steady_clock::time_point end=std::chrono::steady_clock::now();
     MPI_Barrier(MPIdata::comm());
 if(!MPIdata::rank()){
 	std::cout<<"The GPU execution took "<<std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(     ) <<std::endl;  
 }
-    */  
+  */   
 /*
 	
 if(!MPIdata::rank())
@@ -616,7 +615,7 @@ if(!MPIdata::rank())
 
 
 #else
-  //  auto start=chrono::steady_clock::now();
+    //auto start=chrono::steady_clock::now();
     for (int n=0; n< nstloc();n++)
     {
 	    ft.backward(c_.cvalptr(n*mloc),&tmp[0],0,true,true,true);
@@ -644,8 +643,8 @@ if(!MPIdata::rank())
 	    }
 	    */
     }
-/*
-    chrono::steady_clock::time_point end=std::chrono::steady_clock::now();
+
+  /*  chrono::steady_clock::time_point end=std::chrono::steady_clock::now();
     MPI_Barrier(MPIdata::comm());
 if(!MPIdata::rank())
 	std::cout<<"The CPU execution took "<<std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() <<std::endl;        

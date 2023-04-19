@@ -357,7 +357,6 @@ void FourierTransform::forward(complex<double>* f, complex<double>* c, cudaStrea
 ////////////////////////////////////////////////////////////////////////////////
 void FourierTransform::backward(const complex<double>* c, complex<double>* f, cudaStream_t cuda_stream, bool enable_htod, bool enable_dtoh,bool gpu, const int batches)
 {
-
 	
 #if OPTIMIZE_GPU
  #if TIMING
@@ -417,8 +416,6 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f, cu
 #endif
 
   bwd(f);
-//BORRAR
-//bm_.transpose_bwd(&zvec_[0],f); 
   
 #endif
   

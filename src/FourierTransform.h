@@ -65,7 +65,7 @@ class FourierTransform
   static cudaStream_t* cuda_streams;
   static const int nstreams =4; //THIS IS A PERFORMANCE PARAMETER
   //static cublasHandle_t handle;
-  static const int nbatches=4; //THISIS A PERFORMANCE PARAMETER
+  static const int nbatches=1; //THISIS A PERFORMANCE PARAMETER
   double * c_device;
   double * zvec_device;
   double * f_device;
