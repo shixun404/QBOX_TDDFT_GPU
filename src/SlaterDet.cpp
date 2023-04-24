@@ -26,6 +26,7 @@
 #if OPTIMIZE_GPU
 #include "my_cuda_utils.h"
 #include "device_basis_mapping.h"
+#include <omp.h>
 #endif
 #include <chrono> //TODO: Remove
 #include <cstdlib>
@@ -462,16 +463,17 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
 #if OPTIMIZE_GPU
   int nstreams=FourierTransform::get_nstreams();
 #endif
-/*
-  //TODO: Check if mloc() changes across invocations. Otherwise, allocate in constructor only once
-  complex<double> *ctmp, *tmp;
-  cudaMallocHost(reinterpret_cast<void**>(&ctmp), 4*c_.mloc()*sizeof(double));
-#endif
-*/
 
 #if OPTIMIZE_GPU
-  //TODO: Remove this after complete batch execution
-  complex<double>* ctmp = (complex<double>*) malloc(FourierTransform::get_nbatches()*c_.mloc()*sizeof(complex<double>));
+  //complex<double>* ctmp = (complex<double>*) malloc(FourierTransform::get_nbatches()*c_.mloc()*sizeof(complex<double>));
+  complex<double>* ctmp;
+  cudaHostAlloc((void**)&ctmp, nstloc()*c_.mloc()*sizeof(complex<double>), cudaHostAllocDefault);
+
+  std::complex<double>* buffer_elem;
+  cudaHostAlloc((void**)&buffer_elem, c_.mloc() *nstloc() * sizeof(std::complex<double>), cudaHostAllocDefault);
+
+
+//TODO: Multiply by number of streams in parallel.
 #else  
   complex<double>* ctmp = (complex<double>*) malloc(c_.mloc()*sizeof(complex<double>));
 #endif  
@@ -570,24 +572,48 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
     assert((nstloc()%FourierTransform::get_nbatches())==0);
     const int iters = (nstloc()+FourierTransform::get_nbatches()-1)/(FourierTransform::get_nbatches());
     
+   
+
+
+
     //chrono::steady_clock::time_point  start=std::chrono::steady_clock::now();
+    const complex<double>*aux=c_.cvalptr(0);
+    #pragma omp parallel for
+    for(int i=0; i<mloc*nstloc(); i++)
+                buffer_elem[i]=aux[i];
+
+   
     for ( int n = 0; n < iters; n++ )
     {
+	
+	auto stream = FourierTransform::get_cuda_streams(n%nstreams); 
 	const int nbatches = ((n+1)*FourierTransform::get_nbatches()<nstloc())?FourierTransform::get_nbatches():nstloc()-n*FourierTransform::get_nbatches();    
-	ft.backward(c_.cvalptr(n*mloc*FourierTransform::get_nbatches()), &tmp[0], 0, true, false, true, nbatches);
-        cuPairwise(v,ft.get_f_device(),np012loc, 0, nbatches); //FourierTransform::get_cuda_streams(n%nstreams)	
-	ft.forward(NULL, &ctmp[0],0,false, true,true, nbatches);
-	for(int i=0;i<nbatches;i++)
-	{
+	
+	ft.backward(&buffer_elem[n*mloc*FourierTransform::get_nbatches()],NULL, stream, true, false, n*FourierTransform::get_nbatches(), nbatches);
+        cuPairwise(v,ft.get_f_device()+2*n*FourierTransform::get_nbatches()*np012loc,np012loc, stream, nbatches); 	
+	ft.forward(NULL, &ctmp[n*FourierTransform::get_nbatches()*mloc],stream,false, true,n*FourierTransform::get_nbatches(), nbatches);
+	//TODO in new branch. Call daxpy with streams. For that, dcp_device must be transferred and consistently keep updated
+
+     }
+
+
+    //TODO: Currently this is not working bc we could have more iters than streams. Add another nested loop. For (iters) for(nstreams). In such case, all data vectors (device and host) should have the size multiplied by *number_streams instead of *number_of_bands 
+     for (int n=0;n<iters;n++)
+     {
+	auto stream = FourierTransform::get_cuda_streams(n%nstreams);
+	cudaStreamSynchronize(stream);
+	const int nbatches = ((n+1)*FourierTransform::get_nbatches()<nstloc())?FourierTransform::get_nbatches():nstloc()-n*FourierTransform::get_nbatches();
+     	for(int i=0;i<nbatches;i++)
+     	{
 		double* ctmpd = (double*) ctmp;
 		double* dcpd = (double*) dcp;
 		int len = 2 * mloc;
         	int inc1 = 1;
         	double alpha = 1.0;
         	//cublasDaxpy(FourierTransform::get_cublasHandle(), len, &alpha, ft.get_c_device(), inc1, &dcp_device[2*n*mloc], inc1)
-		daxpy(&len,&alpha,&ctmpd[i*2*mloc],&inc1,&dcpd[2*n*mloc*FourierTransform::get_nbatches()+i*2*mloc],&inc1);
+		daxpy(&len,&alpha,&ctmpd[n*FourierTransform::get_nbatches()*2*mloc+i*2*mloc],&inc1,&dcpd[2*n*mloc*FourierTransform::get_nbatches()+i*2*mloc],&inc1);
   	}
-    }
+      }
 
 
 /*    chrono::steady_clock::time_point end=std::chrono::steady_clock::now();
@@ -656,7 +682,13 @@ if(!MPIdata::rank())
    }
  }
   free(tmp);
+#if OPTIMIZE_GPU
+  cudaFreeHost(ctmp);
+  cudaFreeHost(buffer_elem);
+#else
   free(ctmp);
+#endif
+ 
 /*
 if(!MPIdata::rank())
 {

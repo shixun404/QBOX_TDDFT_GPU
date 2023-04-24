@@ -187,9 +187,9 @@ void FourierTransform::cuda_do_fft3d( const int                 fsign,
 
 ////////////////////////////////////////////////////////////////////////////////
 FourierTransform::FourierTransform (const Basis &basis,
-  int np0, int np1, int np2) : basis_(basis),
+  int np0, int np1, int np2, int nstloc) : basis_(basis),
   bm_(BasisMapping(basis,np0,np1,np2)), np0_(np0), np1_(np1), np2_(np2),
-  nvec_(bm_.nvec())
+  nvec_(bm_.nvec()),nstloc_(nstloc) 
 {
   // compute number of transforms along the x,y and z directions
   // ntrans0_ is the number of transforms along x in one of the two blocks
@@ -293,7 +293,7 @@ cudaStream_t* FourierTransform::cuda_streams;
 
 
 ////////////////////////////////////////////////////////////////////////////////
-void FourierTransform::forward(complex<double>* f, complex<double>* c, cudaStream_t cuda_stream, bool enable_htod, bool enable_dtoh, bool gpu, int batches)
+void FourierTransform::forward(complex<double>* f, complex<double>* c, cudaStream_t cuda_stream, bool enable_htod, bool enable_dtoh, const int band_id, int batches)
 {
 
 
@@ -305,30 +305,30 @@ void FourierTransform::forward(complex<double>* f, complex<double>* c, cudaStrea
 
 	if(enable_htod){
 		const double* const pf = (double*) f;
-		cuErr=cudaMemcpy(f_device,pf,sizeof(double)* 2 * n[0] * n[1] * n[2]*batches,cudaMemcpyHostToDevice);
+		cuErr=cudaMemcpy(f_device+band_id*2*np012loc(),pf,sizeof(double)* 2 * n[0] * n[1] * n[2]*batches,cudaMemcpyHostToDevice);
 		//cuErr=cudaMemcpyAsync(f_device,pf,sizeof(double)* 2 * n[0] * n[1] * n[2],cudaMemcpyHostToDevice,cuda_stream);
 		cuda_error_check(cuErr,__FILE__,__LINE__);	
 	}
 
 	if(batches==1)
-		cuda_do_fft3d(-1, n, 1.0/np012(), f_device, f_device,planFWD,cuda_stream,batches);
+		cuda_do_fft3d(-1, n, 1.0/np012(), f_device+band_id*2*np012loc(), f_device+band_id*2*np012loc(),planFWD,cuda_stream,batches);
 	else
-		cuda_do_fft3d(-1, n, 1.0/np012(), f_device, f_device, planFWDbatch, cuda_stream, batches);
+		cuda_do_fft3d(-1, n, 1.0/np012(), f_device+band_id*2*np012loc(), f_device+band_id*2*np012loc(), planFWDbatch, cuda_stream, batches);
 
-	bm_.device_transpose_fwd(f_device, zvec_device,cuda_stream,batches);
+	bm_.device_transpose_fwd(f_device+band_id*2*np012loc(), zvec_device+band_id*2*nvec_*np2_,cuda_stream,batches);
         #if TIMING
 	tm_map_fwd.start();
 	#endif
 	
-	bm_.device_zvec_to_vector(zvec_device,c_device,cuda_stream,batches);
+	bm_.device_zvec_to_vector(zvec_device+band_id*2*nvec_*np2_,c_device+band_id*2*basis_.localsize(),cuda_stream,batches);
 	
 	#if TIMING
 	tm_map_fwd.stop();	
 	#endif
 	if(enable_dtoh)
 	{
-		cuErr=cudaMemcpy((double*) c, c_device,sizeof(double)*2*basis_.localsize()*batches,cudaMemcpyDeviceToHost);
-		//cuErr=cudaMemcpyAsync((double*)&c[0],c_device,sizeof(double)*2*basis_.localsize(),cudaMemcpyDeviceToHost, cuda_stream);
+		//cuErr=cudaMemcpy((double*) c, c_device,sizeof(double)*2*basis_.localsize()*batches,cudaMemcpyDeviceToHost);
+		cuErr=cudaMemcpyAsync((double*) c,c_device+band_id*2*basis_.localsize(),sizeof(double)*2*basis_.localsize()*batches,cudaMemcpyDeviceToHost, cuda_stream);
 		//cudaStreamSynchronize(cuda_stream);
 		cuda_error_check(cuErr, __FILE__, __LINE__);
 		
@@ -355,7 +355,7 @@ void FourierTransform::forward(complex<double>* f, complex<double>* c, cudaStrea
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-void FourierTransform::backward(const complex<double>* c, complex<double>* f, cudaStream_t cuda_stream, bool enable_htod, bool enable_dtoh,bool gpu, const int batches)
+void FourierTransform::backward(const complex<double>* c, complex<double>* f, cudaStream_t cuda_stream, bool enable_htod, bool enable_dtoh,const int band_id, const int batches)
 {
 	
 #if OPTIMIZE_GPU
@@ -367,12 +367,12 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f, cu
    cudaError_t cuErr;
 
    if(enable_htod){
-	cuErr=cudaMemcpy(c_device,(double*)c,sizeof(double)*2*basis_.localsize()*batches,cudaMemcpyHostToDevice);
+	cuErr=cudaMemcpy(c_device+band_id*2*basis_.localsize(),(double*)c,sizeof(double)*2*basis_.localsize()*batches,cudaMemcpyHostToDevice);
   	//cuErr=cudaMemcpyAsync(c_device,pc, sizeof(double)*2*basis_.localsize(),cudaMemcpyHostToDevice,cuda_stream);
   	cuda_error_check(cuErr, __FILE__,__LINE__);
    }
    // pass the c device version to bm and the f vector (which is gpu vector)
-   bm_.device_vector_to_zvec(c_device,zvec_device,cuda_stream,batches);
+   bm_.device_vector_to_zvec(c_device+band_id*2*basis_.localsize(),zvec_device+band_id*2*nvec_*np2_,cuda_stream,batches);
 
 
 
@@ -380,7 +380,7 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f, cu
    tm_map_bwd.stop();
 #endif
    
-   bm_.device_transpose_bwd(zvec_device,f_device, cuda_stream,batches);
+   bm_.device_transpose_bwd(zvec_device+band_id*2*nvec_*np2_,f_device+band_id*2*np012loc(), cuda_stream,batches);
 
 
    int n[3];
@@ -388,16 +388,16 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f, cu
    n[2]=np2_loc(); n[0]=np1_; n[1]=np0_;
   
    if(batches==1)
-   	cuda_do_fft3d (1,n, 1.0, f_device, f_device, planBWD,cuda_stream,batches);
+   	cuda_do_fft3d (1,n, 1.0, f_device+band_id*2*np012loc(), f_device+band_id*2*np012loc(), planBWD,cuda_stream,batches);
    else
-	cuda_do_fft3d (1,n, 1.0, f_device, f_device, planBWDbatch, cuda_stream, batches);
+	cuda_do_fft3d (1,n, 1.0, f_device+band_id*2*np012loc(), f_device+band_id*2*np012loc(), planBWDbatch, cuda_stream, batches);
 
 
 
 
 
    if(enable_dtoh){
-   	cuErr = cudaMemcpy((double*) f,f_device, sizeof(double)* 2 * n[0] * n[1] * n[2] * batches, cudaMemcpyDeviceToHost);
+   	cuErr = cudaMemcpy((double*) f,f_device+band_id*2*np012loc(), sizeof(double)* 2 * n[0] * n[1] * n[2] * batches, cudaMemcpyDeviceToHost);
    	//cuErr = cudaMemcpyAsync((double*)f, f_device,sizeof(double)*2* n[0] * n[1] * n[2], cudaMemcpyDeviceToHost,cuda_stream);
    	cuda_error_check(cuErr,__FILE__,__LINE__);
    }
@@ -1370,11 +1370,11 @@ void FourierTransform::init_lib(void)
         cErr2 = cudaSetDevice (my_dev);
         cuda_check_last(__FILE__,__LINE__);
 	cuda_streams = (cudaStream_t *) malloc(nstreams * sizeof(cudaStream_t));
-/*        for (int i = 0; i < nstreams; i++) {
+        for (int i = 0; i < nstreams; i++) {
                 cErr2 = cudaStreamCreateWithFlags(&cuda_streams[i], cudaStreamNonBlocking);
         	cuda_check_last(__FILE__,__LINE__);
 	}
-*/
+
 	//CUBLAS implementation	
 /*	cublasStatus_t stat = cublasCreate(&handle); 
     	if(stat!= CUBLAS_STATUS_SUCCESS){
@@ -1414,9 +1414,9 @@ void FourierTransform::init_lib(void)
   cufft_error_check(cErr,__LINE__);
   #endif
 
-  cudaMalloc(reinterpret_cast<void**> (&zvec_device), sizeof(double)*2*nvec_*np2_*batches);
-  cudaMalloc(reinterpret_cast<void**> (&f_device),sizeof(double)*2*np0_*np1_*np2_loc()*batches);
-  cudaMalloc(reinterpret_cast<void**> (&c_device),sizeof(double)*2*basis_.localsize()*batches);
+  cudaMalloc(reinterpret_cast<void**> (&zvec_device), sizeof(double)*2*nvec_*np2_*nstloc_);
+  cudaMalloc(reinterpret_cast<void**> (&f_device),sizeof(double)*2*np0_*np1_*np2_loc()*nstloc_);
+  cudaMalloc(reinterpret_cast<void**> (&c_device),sizeof(double)*2*basis_.localsize()*nstloc_);
   if (cudaGetLastError() != cudaSuccess){
          fprintf(stderr, "Cuda error: Failed to allocate\n");
          return;

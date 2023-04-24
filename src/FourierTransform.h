@@ -65,7 +65,7 @@ class FourierTransform
   static cudaStream_t* cuda_streams;
   static const int nstreams =4; //THIS IS A PERFORMANCE PARAMETER
   //static cublasHandle_t handle;
-  static const int nbatches=1; //THISIS A PERFORMANCE PARAMETER
+  static const int nbatches=4; //THISIS A PERFORMANCE PARAMETER
   double * c_device;
   double * zvec_device;
   double * f_device;
@@ -137,11 +137,7 @@ class FourierTransform
 #endif
 
   public:
-  FourierTransform (const Basis &basis, int np0, int np1, int np2);
-#if OPTIMIZE_TRANSPOSE
-  FourierTransform (const Basis &basis, int np0, int np1, int np2,int nstloc);
-#endif
-  /* END*/
+  FourierTransform (const Basis &basis, int np0, int np1, int np2,int nstloc=1);
   ~FourierTransform ();
 
   
@@ -153,13 +149,12 @@ class FourierTransform
   //CUBLAS IMPLEMENTATION
 //  static cublasHandle_t & get_cublasHandle(){return handle;}
   
-  
   double* get_f_device() {return f_device;}
   double* get_c_device(){return c_device;} 
 #endif 
   
   
-  
+  int nstloc_;  
   // backward: Fourier synthesis, compute real-space function
   // forward:  Fourier analysis, compute Fourier coefficients
   // forward transform includes scaling by 1/np012
@@ -168,7 +163,7 @@ class FourierTransform
   
   
   
-  void backward (const std::complex<double>* c, std::complex<double>* f, cudaStream_t cuda_stream=0, bool enable_htod = true, bool enable_dtoh = true,bool gpu=false, const int nbaches=1);
+  void backward (const std::complex<double>* c, std::complex<double>* f, cudaStream_t cuda_stream=0, bool enable_htod = true, bool enable_dtoh = true,const int band_id=0, const int nbaches=1);
   //void backward (const std::complex<double>* c, std::complex<double>* f);
  
 #if OPTIMIZE_TRANSPOSE
@@ -185,7 +180,7 @@ class FourierTransform
 
 
   // Note: forward transforms overwrite the array f
-  void forward(std::complex<double>* f, std::complex<double>* c, cudaStream_t cuda_stream=0, bool enable_htod = true, bool enable_dtoh = true, bool gpu = false, const int batches=1);
+  void forward(std::complex<double>* f, std::complex<double>* c, cudaStream_t cuda_stream=0, bool enable_htod = true, bool enable_dtoh = true, const int band_id=0, const int batches=1);
 
   // double transforms: c1 + i*c2 -> f, f -> c1 + i*c2
   void backward (const std::complex<double>* c1,

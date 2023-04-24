@@ -260,7 +260,7 @@ EnergyFunctional::EnergyFunctional(Sample& s, Wavefunction& wf, ChargeDensity& c
   {
         gpu_=true;
         cudaMalloc(reinterpret_cast<void**>(&v_0_device), sizeof(double)*vft->np012loc());
-        if (wf.nspin()>1)
+	if (wf.nspin()>1)
                 cudaMalloc(reinterpret_cast<void**>(&v_1_device),sizeof(double)*vft->np012loc());
         if (cudaGetLastError() != cudaSuccess){
          fprintf(stderr, "Cuda error: Failed to allocate\n");
