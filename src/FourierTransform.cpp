@@ -305,8 +305,8 @@ void FourierTransform::forward(complex<double>* f, complex<double>* c, cudaStrea
 
 	if(enable_htod){
 		const double* const pf = (double*) f;
-		cuErr=cudaMemcpy(f_device+band_id*2*np012loc(),pf,sizeof(double)* 2 * n[0] * n[1] * n[2]*batches,cudaMemcpyHostToDevice);
-		//cuErr=cudaMemcpyAsync(f_device,pf,sizeof(double)* 2 * n[0] * n[1] * n[2],cudaMemcpyHostToDevice,cuda_stream);
+		//cuErr=cudaMemcpy(f_device+band_id*2*np012loc(),pf,sizeof(double)* 2 * n[0] * n[1] * n[2]*batches,cudaMemcpyHostToDevice);
+		cuErr=cudaMemcpyAsync(f_device+band_id*2*np012loc(),pf,sizeof(double)* 2 * n[0] * n[1] * n[2]*batches,cudaMemcpyHostToDevice,cuda_stream);
 		cuda_error_check(cuErr,__FILE__,__LINE__);	
 	}
 
@@ -367,8 +367,8 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f, cu
    cudaError_t cuErr;
 
    if(enable_htod){
-	cuErr=cudaMemcpy(c_device+band_id*2*basis_.localsize(),(double*)c,sizeof(double)*2*basis_.localsize()*batches,cudaMemcpyHostToDevice);
-  	//cuErr=cudaMemcpyAsync(c_device,pc, sizeof(double)*2*basis_.localsize(),cudaMemcpyHostToDevice,cuda_stream);
+	//cuErr=cudaMemcpy(c_device+band_id*2*basis_.localsize(),(double*)c,sizeof(double)*2*basis_.localsize()*batches,cudaMemcpyHostToDevice);
+  	cuErr=cudaMemcpyAsync(c_device+band_id*2*basis_.localsize(),(double*)c, sizeof(double)*2*basis_.localsize()*batches,cudaMemcpyHostToDevice,cuda_stream);
   	cuda_error_check(cuErr, __FILE__,__LINE__);
    }
    // pass the c device version to bm and the f vector (which is gpu vector)
@@ -397,8 +397,8 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f, cu
 
 
    if(enable_dtoh){
-   	cuErr = cudaMemcpy((double*) f,f_device+band_id*2*np012loc(), sizeof(double)* 2 * n[0] * n[1] * n[2] * batches, cudaMemcpyDeviceToHost);
-   	//cuErr = cudaMemcpyAsync((double*)f, f_device,sizeof(double)*2* n[0] * n[1] * n[2], cudaMemcpyDeviceToHost,cuda_stream);
+   	//cuErr = cudaMemcpy((double*) f,f_device+band_id*2*np012loc(), sizeof(double)* 2 * n[0] * n[1] * n[2] * batches, cudaMemcpyDeviceToHost);
+   	cuErr = cudaMemcpyAsync((double*)f, f_device+band_id*2*np012loc(),sizeof(double)*2* n[0] * n[1] * n[2] * batches, cudaMemcpyDeviceToHost,cuda_stream);
    	cuda_error_check(cuErr,__FILE__,__LINE__);
    }
    

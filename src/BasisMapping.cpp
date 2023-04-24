@@ -650,8 +650,8 @@ BasisMapping::~BasisMapping()
 void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaStream_t stream, const int batch) const
 {
 
-//  cudaMemsetAsync(ct,0,np012loc_*2*sizeof(double),stream);
-    cudaMemset(ct, 0, np012loc_*2*batch*sizeof(double));
+    cudaMemsetAsync(ct,0,np012loc_*2*batch*sizeof(double),stream);
+    //cudaMemset(ct, 0, np012loc_*2*batch*sizeof(double));
     cuda_check_last(__FILE__,__LINE__);
     //CUSTOM IMPLEMENTATION
     //cudaDeviceProp deviceProperties;
@@ -664,8 +664,8 @@ void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaSt
 void BasisMapping::device_vector_to_zvec(const double *c,
   double *zvec,cudaStream_t stream, const int batch) const
 {
-  //cudaMemsetAsync(zvec,0,nvec_*np2_*2*sizeof(double),stream);
-  cudaMemset(zvec, 0, nvec_*np2_*2*batch*sizeof(double));
+  cudaMemsetAsync(zvec,0,nvec_*np2_*2*batch*sizeof(double),stream);
+  //cudaMemset(zvec, 0, nvec_*np2_*2*batch*sizeof(double));
   cuda_check_last(__FILE__,__LINE__);
   const int ng = basis_.localsize();
 

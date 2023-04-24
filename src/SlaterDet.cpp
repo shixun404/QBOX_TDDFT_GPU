@@ -572,9 +572,6 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
     assert((nstloc()%FourierTransform::get_nbatches())==0);
     const int iters = (nstloc()+FourierTransform::get_nbatches()-1)/(FourierTransform::get_nbatches());
     
-   
-
-
 
     //chrono::steady_clock::time_point  start=std::chrono::steady_clock::now();
     const complex<double>*aux=c_.cvalptr(0);
@@ -582,10 +579,8 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
     for(int i=0; i<mloc*nstloc(); i++)
                 buffer_elem[i]=aux[i];
 
-   
     for ( int n = 0; n < iters; n++ )
     {
-	
 	auto stream = FourierTransform::get_cuda_streams(n%nstreams); 
 	const int nbatches = ((n+1)*FourierTransform::get_nbatches()<nstloc())?FourierTransform::get_nbatches():nstloc()-n*FourierTransform::get_nbatches();    
 	
@@ -704,8 +699,8 @@ if(!MPIdata::rank())
 }
 */
 
-//MPI_Barrier(MPIdata::comm());
-//exit(-1);
+MPI_Barrier(MPIdata::comm());
+exit(-1);
 
 
 
