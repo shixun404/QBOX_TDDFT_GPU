@@ -53,9 +53,14 @@ template<> struct Copy<0>{
         static inline __device__ void
         copy(double* dst, const double* src, const int *ip, const int *im, const int id, const int n, const int n2){
                 const int index = ip[id];
-		dst[2*index+2*blockIdx.y*n2]=src[2*id+2*blockIdx.y*n];
-		dst[2*index+1+2*blockIdx.y*n2]=src[2*id+1+2*blockIdx.y*n];
-   	}
+//TODO: Delete
+	//	if((blockIdx.y==1)&&((2*index+2*blockIdx.y*n2)==1024020))
+	//		printf("Block %d Th %d (id %d)- mi index %d  a partir de id %d con n2 %d y n %d voy a escribir en %d \n", blockIdx.x, threadIdx.x, id, index, id,n2,n,2*index+2*blockIdx.y*n2);
+	
+		dst[2*index+(2*blockIdx.y*n2)]=src[2*id+(2*blockIdx.y*n)];
+		dst[2*index+1+(2*blockIdx.y*n2)]=src[2*id+1+(2*blockIdx.y*n)];
+	}
+
 };
 
 
@@ -65,6 +70,8 @@ template<> struct Copy<1>{
         copy(double* dst, const double* src, const int *ip, const int *im, const int id, const int n, const int n2){
                 const int indexp = ip[id];
                 const int indexm = im[id];
+
+
 
 		dst[2*indexp+2*blockIdx.y*n2]=src[2*id+2*blockIdx.y*n];
                 dst[2*indexp+1+2*blockIdx.y*n2]=src[2*id+1+2*blockIdx.y*n];

@@ -63,7 +63,7 @@ class FourierTransform
 #if OPTIMIZE_GPU
   static int my_dev;
   static cudaStream_t* cuda_streams;
-  static const int nstreams =4; //THIS IS A PERFORMANCE PARAMETER
+  static const int nstreams =2; //THIS IS A PERFORMANCE PARAMETER
   //static cublasHandle_t handle;
   static const int nbatches=4; //THISIS A PERFORMANCE PARAMETER
   double * c_device;
@@ -133,7 +133,7 @@ class FourierTransform
   void bwd(std::complex<double>* val);
 
 #if OPTIMIZE_GPU 
-  void cuda_do_fft3d( const int fsign, const int  *n, const double scale,  double *data, double* data2,cufftHandle &plan, cudaStream_t cuda_stream, const int batches = 1);
+  void cuda_do_fft3d( const int fsign, const int  *n, const double scale,  double *data, double* data2,cufftHandle &plan, cudaStream_t cuda_stream=0, const int batches = 1);
 #endif
 
   public:

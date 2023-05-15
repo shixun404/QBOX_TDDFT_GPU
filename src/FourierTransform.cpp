@@ -175,7 +175,6 @@ void FourierTransform::cuda_do_fft3d( const int                 fsign,
       cublasDscal(handle,2*lmem, &scale, (double *) data2, 1);
       */
       cuDscal(scale,(double*) data2, 2*lmem, cuda_stream, batches);	
-	  //TODO: Replace with my batched cuPairwise
   }
 
 
@@ -387,6 +386,7 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f, cu
    //From hackathon: n[0]=np2_loc(); n[1]=np1_; n[2]=np0_;
    n[2]=np2_loc(); n[0]=np1_; n[1]=np0_;
   
+   
    if(batches==1)
    	cuda_do_fft3d (1,n, 1.0, f_device+band_id*2*np012loc(), f_device+band_id*2*np012loc(), planBWD,cuda_stream,batches);
    else
@@ -401,6 +401,7 @@ void FourierTransform::backward(const complex<double>* c, complex<double>* f, cu
    	cuErr = cudaMemcpyAsync((double*)f, f_device+band_id*2*np012loc(),sizeof(double)*2* n[0] * n[1] * n[2] * batches, cudaMemcpyDeviceToHost,cuda_stream);
    	cuda_error_check(cuErr,__FILE__,__LINE__);
    }
+
    
 
 #else

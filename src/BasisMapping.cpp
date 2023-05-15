@@ -657,19 +657,19 @@ void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaSt
     //cudaDeviceProp deviceProperties;
     //cudaGetDeviceProperties(&deviceProperties, FourierTransform::get_my_dev());
     const unsigned int max_blocks = 2147483647; //deviceProperties.maxGridSize[0];
-    cuZcopy(np2_,zvec,np2_,1,ct,1,np0_*np1_,device_zvec_to_val,nvec_,stream,batch,1,max_blocks,zvec_size()/**np2_*/,np0_*np1_*np2_loc());
+    cuZcopy(np2_,zvec,np2_,1,ct,1,np0_*np1_,device_zvec_to_val,nvec_,stream,batch,1,max_blocks,zvec_size(),np0_*np1_*np2_loc());
 
 }
 
 void BasisMapping::device_vector_to_zvec(const double *c,
   double *zvec,cudaStream_t stream, const int batch) const
 {
-  cudaMemsetAsync(zvec,0,nvec_*np2_*2*batch*sizeof(double),stream);
+  cudaMemsetAsync(zvec,0,batch*zvec_size()*sizeof(complex<double>),stream);
   //cudaMemset(zvec, 0, nvec_*np2_*2*batch*sizeof(double));
   cuda_check_last(__FILE__,__LINE__);
   const int ng = basis_.localsize();
 
-  
+
   if ( basis_.real() )
   	cuda_vector_to_zvec(c,zvec,ip_device,im_device,ng,zvec_size(),stream,batch,1);
   else
