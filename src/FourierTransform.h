@@ -151,16 +151,17 @@ class FourierTransform
 #if OPTIMIZE_GPU 
 
     static void initializeConst() {
-#if AUTOTUNER
+# if AUTOTUNER
 	nstreams=atoi(DFTuning::getEnv("QBOX_NSTREAMS"));
 	nbatches=atoi(DFTuning::getEnv("QBOX_NBATCHES"));
-#else
+# else
    	nstreams=2;
 	nbatches=4;	
-#endif
+# endif
   }
+#endif
 
-
+#if OPTIMIZE_GPU
   static cudaStream_t& get_cuda_streams(int i){return cuda_streams[i];}
   static int get_nstreams(){return nstreams;}
   static int get_my_dev(){return my_dev;}

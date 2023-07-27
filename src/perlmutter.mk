@@ -21,7 +21,7 @@
  OPT= -O3  -mp=multicore,gpu -gopt -traceback -gpu=cc80,cuda11.7 -gopt -traceback -cuda
 
  PLTFLAGS += $(OPT)  \
-             -DAUTOTUNER -DTUNER -DOPTIMIZE_GPU -DUSE_MPI -DSCALAPACK -DADD_ \
+             -DOPTIMIZE_GPU -DUSE_MPI -DSCALAPACK -DADD_ \
              -DAPP_NO_THREADS -DXML_USE_NO_THREADS -DUSE_XERCES \
              -DMPICH_IGNORE_CXX_SEEK -DPARALLEL_FS #-DUSE_FFTW3
 

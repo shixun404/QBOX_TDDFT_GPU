@@ -256,9 +256,9 @@ void cuda_vector_to_zvec (const double *c,
         dim3 threads (THREADS_PER_BLOCK);
         dim3 blocks (block_num,block_batch);
 	if(PLAN)
-        	vector_to_zvec_kernel<UNROLL_FACTOR,1><<<blocks,threads,0,stream>>>(c,zvec,ip_,im_,ng,dst_size);
+        	vector_to_zvec_kernel<1><<<blocks,threads,0,stream>>>(c,zvec,ip_,im_,ng,dst_size);
 	else
-		vector_to_zvec_kernel<UNROLL_FACTOR,0><<<blocks,threads,0,stream>>>(c,zvec,ip_,im_,ng,dst_size);
+		vector_to_zvec_kernel<0><<<blocks,threads,0,stream>>>(c,zvec,ip_,im_,ng,dst_size);
 
 
 #endif

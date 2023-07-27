@@ -803,12 +803,19 @@ int main(int argc, char **argv, char **envp)
 
 #else
 
-
+# if OPTIMIZE_GPU
+int FourierTransform::nstreams=-1;
+int FourierTransform::nbatches=-1;
+#endif
 
 int main(int argc, char **argv, char **envp)
 {
   Timer tm;
   tm.start();
+#if OPTIMIZE_GPU
+  FourierTransform::initializeConst();
+#endif
+
 
   MPI_Init(&argc,&argv);
 
@@ -816,7 +823,6 @@ int main(int argc, char **argv, char **envp)
   MPI_Comm_size(MPI_COMM_WORLD,&ntasks);
   int mype;
   MPI_Comm_rank(MPI_COMM_WORLD,&mype);
-
   // default values for number of blocks
   // ngb: number of G vector blocks
   // nstb: number of states blocks
