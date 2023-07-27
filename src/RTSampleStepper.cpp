@@ -551,6 +551,10 @@ void RTSampleStepper::step(int rtiter)
 
     if ( (iter%rtas_ == 0) && onpe0 )
       cout << "</rt-iteration>" << endl;
+
+//ADRIAN ADDED FOR TESTING
+//
+return;
   } // for iter
 
   if ( atoms_move )

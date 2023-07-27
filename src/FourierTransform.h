@@ -22,13 +22,15 @@
 #include <complex>
 #include <vector>
 
-#if !( defined(USE_FFTW2) || defined(USE_FFTW3) || defined(USE_ESSL_FFT) || defined(FFT_NOLIB) )
+#if !( defined(OPTIMIZE_GPU) || defined(USE_FFTW2) || defined(USE_FFTW3) || defined(USE_ESSL_FFT) || defined(FFT_NOLIB) )
 #error "Must define USE_FFTW2, USE_FFTW3, USE_ESSL_FFT or FFT_NOLIB"
 #endif
 
 #if defined(USE_FFTW2) && defined(USE_FFTW3)
 #error "Cannot define USE_FFTW2 and USE_FFTW3"
 #endif
+
+
 
 #if USE_FFTW2
 #if USE_DFFTW
@@ -45,6 +47,17 @@
 #endif
 #endif
 
+#if AUTOTUNER
+#include "utilities.hpp"
+
+#endif
+
+#if OPTIMIZE_GPU
+#include <cufft.h>
+#include "cublas_v2.h"
+#endif 
+//TODO: Review
+
 #include "Timer.h"
 #include "BasisMapping.h"
 
@@ -54,8 +67,23 @@ class FourierTransform
 {
   private:
 
-  const Basis& basis_;
+#if OPTIMIZE_GPU
+  static int my_dev;
+  static cudaStream_t* cuda_streams;
+  static int nstreams; //THIS IS A PERFORMANCE PARAMETER
+  //static cublasHandle_t handle;
+  static int nbatches; //THISIS A PERFORMANCE PARAMETER
+  double * c_device;
+  double * zvec_device;
+  double * f_device;
+  BasisMapping bm_;
+
+  
+#else
   const BasisMapping bm_;
+#endif	  
+
+  const Basis& basis_;
 
   const int np0_,np1_,np2_;
   const int nvec_;
@@ -71,7 +99,12 @@ class FourierTransform
   
   void init_lib(void);
 
-#if USE_ESSL_FFT
+#if OPTIMIZE_GPU
+  cufftHandle planFWD;
+  cufftHandle planBWD;
+  cufftHandle planFWDbatch;
+  cufftHandle planBWDbatch;
+#elif USE_ESSL_FFT
 #if USE_ESSL_2DFFT
   std::vector<double> aux1xyf,aux1zf;
   std::vector<double> aux1xyb,aux1zb;
@@ -96,7 +129,7 @@ class FourierTransform
 #elif defined(FFT_NOLIB)
   // no library
 #else
-#error "Must define USE_FFTW2, USE_FFTW3, USE_ESSL_FFT or FFT_NOLIB"
+#error "Must define USE_FFTW2, USE_FFTW3, USE_ESSL_FFT, OPTIMIZE_GPU or FFT_NOLIB"
 #endif
 
   void fxy(std::complex<double>* val);
@@ -106,22 +139,53 @@ class FourierTransform
   void fwd(std::complex<double>* val);
   void bwd(std::complex<double>* val);
 
-
+#if OPTIMIZE_GPU 
+  void cuda_do_fft3d( const int fsign, const int  *n, const double scale,  double *data, double* data2,cufftHandle &plan, cudaStream_t cuda_stream=0, const int batches = 1);
+#endif
 
   public:
-  FourierTransform (const Basis &basis, int np0, int np1, int np2);
- /*Code modified Dr. Adrian Perez*/
-#if OPTIMIZE_TRANSPOSE
-  FourierTransform (const Basis &basis, int np0, int np1, int np2,int nstloc);
-#endif
-  /* END*/
+  FourierTransform (const Basis &basis, int np0, int np1, int np2,int nstloc=1);
   ~FourierTransform ();
 
+  
+#if OPTIMIZE_GPU 
+
+    static void initializeConst() {
+# if AUTOTUNER
+	nstreams=atoi(DFTuning::getEnv("QBOX_NSTREAMS"));
+	nbatches=atoi(DFTuning::getEnv("QBOX_NBATCHES"));
+# else
+   	nstreams=2;
+	nbatches=4;	
+# endif
+  }
+#endif
+
+#if OPTIMIZE_GPU
+  static cudaStream_t& get_cuda_streams(int i){return cuda_streams[i];}
+  static int get_nstreams(){return nstreams;}
+  static int get_my_dev(){return my_dev;}
+  static int get_nbatches(){return nbatches;}
+  //CUBLAS IMPLEMENTATION
+//  static cublasHandle_t & get_cublasHandle(){return handle;}
+  
+  double* get_f_device() {return f_device;}
+  double* get_c_device(){return c_device;} 
+#endif 
+  
+  
+  int nstloc_;  
   // backward: Fourier synthesis, compute real-space function
   // forward:  Fourier analysis, compute Fourier coefficients
   // forward transform includes scaling by 1/np012
   // single transforms: c -> f, f -> c
-  void backward (const std::complex<double>* c, std::complex<double>* f);
+  
+  
+  
+  
+  void backward (const std::complex<double>* c, std::complex<double>* f, cudaStream_t cuda_stream=0, bool enable_htod = true, bool enable_dtoh = true,const int band_id=0, const int nbaches=1);
+  //void backward (const std::complex<double>* c, std::complex<double>* f);
+ 
 #if OPTIMIZE_TRANSPOSE
   bool get_optimization() const {return optimization_;}
   void backward1 (const std::complex<double>* c, int band=-1);
@@ -136,7 +200,7 @@ class FourierTransform
 
 
   // Note: forward transforms overwrite the array f
-  void forward(std::complex<double>* f, std::complex<double>* c);
+  void forward(std::complex<double>* f, std::complex<double>* c, cudaStream_t cuda_stream=0, bool enable_htod = true, bool enable_dtoh = true, const int band_id=0, const int batches=1);
 
   // double transforms: c1 + i*c2 -> f, f -> c1 + i*c2
   void backward (const std::complex<double>* c1,

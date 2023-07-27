@@ -25,6 +25,14 @@
 #include <cassert>
 #include <cstring> // memset
 
+#if OPTIMIZE_GPU
+//#include "cublas.h" 
+#include "cublas_v2.h"
+#include "device_basis_mapping.h"
+#include "my_cuda_utils.h"
+#include "FourierTransform.h"
+#endif
+
 #if OPTIMIZE_BRUCK
 #include "non_uniform_bruck.h"
 #endif
@@ -44,22 +52,20 @@ void zsctr_(int* n, complex<double>* x, int* indx, complex<double>* y);
 
 int alltoallv( void *sendbuf,  int *sendcounts,  int *sdispls, MPI_Datatype sendtype, void *recvbuf, int *recvcounts,  int *rdispls, MPI_Datatype recvtype, MPI_Comm comm)
 {
-int status=0;
+	int status=0;
 #if OPTIMIZE_BRUCK
-twophase_bruck_alltoallv((char*)sendbuf,sendcounts,sdispls,
-      sendtype,(char*)recvbuf,recvcounts,rdispls,
-      recvtype, comm);
+	twophase_bruck_alltoallv((char*)sendbuf,sendcounts,sdispls,
+      		sendtype,(char*)recvbuf,recvcounts,rdispls,
+      		recvtype, comm);
 #else
-status=MPI_Alltoallv(sendbuf,sendcounts,sdispls,
-      sendtype,recvbuf,recvcounts,rdispls,
-      recvtype, comm);
+	status=MPI_Alltoallv(sendbuf,sendcounts,sdispls,
+      		sendtype,recvbuf,recvcounts,rdispls,
+      		recvtype, comm);
 #endif
 
-return status;
+	return status;
 
 }
-
-
 
 
 
@@ -125,8 +131,17 @@ BasisMapping::BasisMapping (const Basis &basis, int np0, int np1, int np2, int n
   // compute index arrays ip_ and im_ for mapping vector->zvec
   if ( basis_.real() )
   {
+#if OPTIMIZE_GPU
+    /*cudaError_t cuErr;
+    cuErr= cudaHostAlloc((void**) &ip_, basis_.localsize()*sizeof(int),cudaHostAllocDefault);
+    pw_cuda_error_check(cuErr,__LINE__);
+ */
+    ip_=(int*)malloc(basis_.localsize()*sizeof(int));
+    im_=(int*)malloc(basis_.localsize()*sizeof(int));
+#else
     ip_.resize(basis_.localsize());
     im_.resize(basis_.localsize());
+#endif
 
     if ( myproc_ == 0 )
     {
@@ -197,8 +212,18 @@ BasisMapping::BasisMapping (const Basis &basis, int np0, int np1, int np2, int n
   {
     // basis is complex
     // compute index array ip_ for mapping vector->zvec
-    // Note: im_ is not used
+
+#if OPTIMIZE_GPU
+    //cudaError_t cuErr;
+    //cuErr=cudaHostAlloc((void**) &ip_, basis_.localsize()*sizeof(int),cudaHostAllocDefault);
+    //pw_cuda_error_check(cuErr, __LINE__);
+
+    ip_=(int*)malloc(basis_.localsize()*sizeof(int));
+    im_=NULL;
+#else   
     ip_.resize(basis_.localsize());
+#endif
+
 
     // map rods(h,k)
     // rod(h,k)   maps onto column irod*np2_ of zvec_, irod=0,..,nrods-1
@@ -554,7 +579,105 @@ BasisMapping::BasisMapping (const Basis &basis, int np0, int np1, int np2, int n
     }
 #endif
   } // single task
+
+#if OPTIMIZE_GPU
+	ip_device=NULL;
+	im_device=NULL;
+	device_zvec_to_val=NULL;
+#endif
 }
+
+
+
+#if OPTIMIZE_GPU
+
+int BasisMapping::allocate_device( cudaStream_t stream){
+
+    if(ip_device)
+        return -1;
+   
+    cudaMalloc(reinterpret_cast<void**>(&ip_device),sizeof(int)*basis_.localsize());
+    //cudaMallocHost(reinterpret_cast<void**>(&ip_device),sizeof(int)*basis_.localsize());
+    cuda_check_last(__FILE__,__LINE__);
+
+    cudaMalloc(reinterpret_cast<void**>(&im_device),sizeof(int)*basis_.localsize());
+    cuda_check_last(__FILE__,__LINE__);
+    cudaMalloc(reinterpret_cast<void**>(&device_zvec_to_val),sizeof(int)*nvec_);
+    cuda_check_last(__FILE__,__LINE__);
+
+
+    cudaError_t cuErr=cudaMemcpy(ip_device, ip_, sizeof(int)*basis_.localsize(),cudaMemcpyHostToDevice);
+    //cudaError_t cuErr=cudaMemcpyAsync(ip_device, ip_, sizeof(int)*basis_.localsize(),cudaMemcpyHostToDevice, stream);
+    cuda_error_check(cuErr,__FILE__,__LINE__);
+    
+    if(im_){
+    	cuErr=cudaMemcpy(im_device, im_, sizeof(int)*basis_.localsize(),cudaMemcpyHostToDevice);
+    	cuda_error_check(cuErr,__FILE__,__LINE__);
+    }
+    cuErr=cudaMemcpy(device_zvec_to_val, zvec_to_val_.data(), sizeof(int)*nvec_,cudaMemcpyHostToDevice);
+    cuda_error_check(cuErr,__FILE__,__LINE__);
+
+    
+    //We use the NULL stream for now; it is blocking with other streams, so this ensures that ip_device will be found in memory when the next CUDA calls will try to operate with it 
+     
+
+    return 0;
+}
+
+BasisMapping::~BasisMapping()
+{
+	if(ip_device)
+        {
+                cudaFree(ip_device);
+                cuda_check_last(__FILE__,__LINE__);
+        }
+	if(im_device)
+	{
+		cudaFree(im_device);
+		cuda_check_last(__FILE__,__LINE__);
+	}
+	if(device_zvec_to_val)
+	{
+		cudaFree(device_zvec_to_val);
+		cuda_check_last(__FILE__,__LINE__);
+	}
+
+        free(ip_);
+	if(im_)
+		free(im_);
+}
+
+void BasisMapping::device_transpose_bwd(const double * zvec, double * ct, cudaStream_t stream, const int batch) const
+{
+
+    cudaMemsetAsync(ct,0,np012loc_*2*batch*sizeof(double),stream);
+    //cudaMemset(ct, 0, np012loc_*2*batch*sizeof(double));
+    cuda_check_last(__FILE__,__LINE__);
+    //CUSTOM IMPLEMENTATION
+    //cudaDeviceProp deviceProperties;
+    //cudaGetDeviceProperties(&deviceProperties, FourierTransform::get_my_dev());
+    const unsigned int max_blocks = 2147483647; //deviceProperties.maxGridSize[0];
+    cuZcopy(np2_,zvec,np2_,1,ct,1,np0_*np1_,device_zvec_to_val,nvec_,stream,batch,1,max_blocks,zvec_size(),np0_*np1_*np2_loc());
+
+}
+
+void BasisMapping::device_vector_to_zvec(const double *c,
+  double *zvec,cudaStream_t stream, const int batch) const
+{
+  cudaMemsetAsync(zvec,0,batch*zvec_size()*sizeof(complex<double>),stream);
+  //cudaMemset(zvec, 0, nvec_*np2_*2*batch*sizeof(double));
+  cuda_check_last(__FILE__,__LINE__);
+  const int ng = basis_.localsize();
+
+
+  if ( basis_.real() )
+  	cuda_vector_to_zvec(c,zvec,ip_device,im_device,ng,zvec_size(),stream,batch,1);
+  else
+	cuda_vector_to_zvec(c,zvec,ip_device,NULL,ng,zvec_size(),stream,batch,0);
+}
+
+#endif
+
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -564,6 +687,7 @@ void BasisMapping::transpose_bwd(const complex<double> *zvec,
   // Transpose zvec to ct
   if ( nprocs_ == 1 )
   {
+
     // single task
 
     // clear ct
@@ -661,8 +785,6 @@ void BasisMapping::transpose_bwd(const complex<double> *zvec,
 void BasisMapping::transpose_fwd1(const std::complex<double> *ct,
                      int band) const
 {
-     
-
     double* const pr = (double*) &rbuf[0];
     const double* const pv = (const double*) ct;
     int isource=0;
@@ -684,8 +806,6 @@ void BasisMapping::transpose_fwd1(const std::complex<double> *ct,
     	}
 	isource+=(nstloc_-1-band)*basis_.nrod_loc(iproc)*np2_loc_[myproc_];
     }
-
-	
 }
 
 void BasisMapping::transpose_fwd2() const{
@@ -786,7 +906,7 @@ void BasisMapping::transpose_bwd3(std::complex<double> *ct, int band) const  {
       double* const pv = (double*) ct;
 
 
-      int isource=0; //band*basis._nrod_loc(0)*np2_loc_[myproc_];
+      int isource=0; 
       for ( int iproc = 0; iproc < nprocs_; iproc++ )
       {
 	isource+=band*basis_.nrod_loc(iproc)*np2_loc_[myproc_];      
@@ -810,7 +930,19 @@ void BasisMapping::transpose_bwd3(std::complex<double> *ct, int band) const  {
 }
 
 #endif
-/*END*/
+
+
+#if OPTIMIZE_GPU
+void BasisMapping::device_transpose_fwd(const double*ct, double* zvec, cudaStream_t stream, const int batch) const
+{
+	cudaDeviceProp deviceProperties;
+        cudaGetDeviceProperties(&deviceProperties, FourierTransform::get_my_dev());
+        const int max_blocks = deviceProperties.maxGridSize[0];
+	cuZcopy(np2_,ct,1,np0_*np1_,zvec,np2_,1,device_zvec_to_val,nvec_,stream,batch,-1,max_blocks,np0_*np1_*np2_loc(),zvec_size());
+}
+
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 void BasisMapping::transpose_fwd(const complex<double> *ct,
   complex<double> *zvec) const
@@ -972,6 +1104,18 @@ void BasisMapping::doublevector_to_zvec(const complex<double> *c1,
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
+
+#if OPTIMIZE_GPU
+void BasisMapping::device_zvec_to_vector(const double * zvec, double * c, cudaStream_t stream, const int batch) const
+{
+	const int ng= basis_.localsize();
+	cuda_zvec_to_vector(zvec,c,ip_device,ng,zvec_size(), stream,batch);
+}
+
+#endif
+
+
 void BasisMapping::zvec_to_vector(const complex<double> *zvec,
   complex<double> *c) const
 {

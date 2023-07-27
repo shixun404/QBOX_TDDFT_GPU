@@ -106,7 +106,8 @@ ChargeDensity::ChargeDensity(const Wavefunction& wf,bool optimization) : wf_(wf)
   }
   optimization_=optimization;
 #else
-	ft_.push_back(new FourierTransform(wb,np0v,np1v,np2v));
+  	const int nst_loc=wf.sd(0,ikp_loc)->nstloc();
+	ft_.push_back(new FourierTransform(wb,np0v,np1v,np2v,nst_loc));
 #endif
 
     }

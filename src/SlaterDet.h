@@ -45,6 +45,8 @@ class SlaterDet
   void byteswap_double(size_t n, double* x);
   double fermi(double e, double mu, double fermitemp);
 
+//  static int counter; //TODO: Delete - ADRIAN
+
   public:
 
   mutable TimerMap tmap;
@@ -65,7 +67,7 @@ class SlaterDet
               double ecut, int nst);
   void compute_density(FourierTransform& ft, double weight, double* rho ) const;
   void compute_tau(FourierTransform& ft, double weight, double* taur) const;
-  void rs_mul_add(FourierTransform& ft, const double* v, SlaterDet& sdp) const;
+  void rs_mul_add(FourierTransform& ft, const double* v, SlaterDet& sdp, bool gpu=true) const;
   void randomize(double amplitude);
   void cleanup(void);
   void init(void);

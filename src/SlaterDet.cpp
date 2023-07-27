@@ -23,7 +23,17 @@
 #include "Base64Transcoder.h"
 #include "Timer.h"
 #include "MPIdata.h"
+#if OPTIMIZE_GPU
+#include "my_cuda_utils.h"
+#include "device_basis_mapping.h"
+#include <omp.h>
+#endif
+#if AUTOTUNER
+#include "Executor.hpp"
+#include <mpi.h>
 
+#include <chrono> //TODO: Remove
+#endif
 #include <cstdlib>
 #include <cstring> // memcpy
 #include <iostream>
@@ -141,7 +151,7 @@ void SlaterDet::resize(const UnitCell& cell, const UnitCell& refcell,
             for ( int i = 0; i < tmpr.size(); i++ )
               tmpr[i] = 0.0;
             ft1.backward(ctmp.cvalptr(n*ctmp.mloc()),&tmpr[0]);
-            ft2.forward(&tmpr[0], c_.valptr(n*c_.mloc()));
+	    ft2.forward(&tmpr[0], c_.valptr(n*c_.mloc()));
           }
         }
       }
@@ -282,54 +292,59 @@ void SlaterDet::compute_density(FourierTransform& ft,
   {
   bool execute=true;
 #if OPTIMIZE_TRANSPOSE
-    // only one transform at a time
- if (ft.get_optimization())
- {
-  execute=false;
-  for ( int n = 0; n < nstloc(); n++ )
-    {
-      // global n index
-      const int nn = ctxt_.mycol() * c_.nb() + n;
-      const double fac = weight * omega_inv * occ_[nn];
-
-      if ( fac > 0.0 )
-      {
-        ft.backward1(c_.cvalptr(n*c_.mloc()),n);
-      }
-    }
-  ft.backward2();
-  for ( int n=0;n < nstloc(); n++)
+  // only one transform at a time
+  if (ft.get_optimization())
   {
-      const int nn = ctxt_.mycol() * c_.nb() + n;
-      const double fac = weight * omega_inv * occ_[nn];
-      if(fac > 0.0)
-      {
-      	ft.backward3(&tmp[0],n);
-      	for ( int i = 0; i < np012loc; i++ )
-          rho[i] += fac * norm(tmp[i]);
-      }
-  }
+  	execute=false;
+  	for ( int n = 0; n < nstloc(); n++ )
+    	{
+      		// global n index
+      		const int nn = ctxt_.mycol() * c_.nb() + n;
+      		const double fac = weight * omega_inv * occ_[nn];
+
+      		if ( fac > 0.0 )
+      		{
+        		ft.backward1(c_.cvalptr(n*c_.mloc()),n);
+      		}
+    	}
+  	ft.backward2();
+  	for ( int n=0;n < nstloc(); n++)
+  	{
+      		const int nn = ctxt_.mycol() * c_.nb() + n;
+      		const double fac = weight * omega_inv * occ_[nn];
+      		if(fac > 0.0)
+      		{
+      			ft.backward3(&tmp[0],n);
+      			for ( int i = 0; i < np012loc; i++ )
+          			rho[i] += fac * norm(tmp[i]);
+      		}
+  	}
  }
 
 
 #endif
 
+  if(execute){
+ 	for ( int n = 0; n < nstloc(); n++ )
+    	{    
+      		// global n index
+      		const int nn = ctxt_.mycol() * c_.nb() + n; 
+      		const double fac = weight * omega_inv * occ_[nn];
 
- if(execute){
- for ( int n = 0; n < nstloc(); n++ )
-    {    
-      // global n index
-      const int nn = ctxt_.mycol() * c_.nb() + n; 
-      const double fac = weight * omega_inv * occ_[nn];
-
-      if ( fac > 0.0 )
-      {    
-        ft.backward(c_.cvalptr(n*c_.mloc()),&tmp[0]);
-        for ( int i = 0; i < np012loc; i++ )
-          rho[i] += fac * norm(tmp[i]);
-      }    
-    }    
+      		if ( fac > 0.0 )
+      		{   
+#if OPTIMIZE_GPU
+			int nstreams=FourierTransform::get_nstreams();      
+			ft.backward(c_.cvalptr(n*c_.mloc()),&tmp[0],0); // FourierTransform::get_cuda_streams(n%nstreams));
+#else 
+		        ft.backward(c_.cvalptr(n*c_.mloc()),&tmp[0]);
+#endif
+			for ( int i = 0; i < np012loc; i++ )
+          			rho[i] += fac * norm(tmp[i]);
+      		}    
+    	}    
   }
+
  }
 }
 
@@ -442,17 +457,39 @@ void SlaterDet::compute_tau(FourierTransform& ft,
   }
 }
 
+//int SlaterDet::counter=0;
+
 ////////////////////////////////////////////////////////////////////////////////
 void SlaterDet::rs_mul_add(FourierTransform& ft,
-  const double* v, SlaterDet& sdp) const
+  const double* v, SlaterDet& sdp, bool gpu) const
 {
   // transform states to real space, multiply states by v[r] in real space
   // transform back to reciprocal space and add to sdp
   // sdp[n] += v * sd[n]
 
-  vector<complex<double> > tmp(ft.np012loc());
-  vector<complex<double> > ctmp(2*c_.mloc());
+#if OPTIMIZE_GPU
+  int nstreams=FourierTransform::get_nstreams();
+#endif
 
+#if OPTIMIZE_GPU
+  complex<double>* ctmp;
+  cudaHostAlloc((void**)&ctmp, nstloc()*c_.mloc()*sizeof(complex<double>), cudaHostAllocDefault);
+
+  std::complex<double>* buffer_elem;
+  cudaHostAlloc((void**)&buffer_elem, c_.mloc() *nstloc() * sizeof(std::complex<double>), cudaHostAllocDefault);
+
+
+#else  
+  complex<double>* ctmp = (complex<double>*) malloc(c_.mloc()*sizeof(complex<double>));
+#endif 
+  complex<double>* tmp = (complex<double>*) malloc(ft.np012loc()*sizeof(complex<double>));
+
+  if(!ctmp){
+  	fprintf(stderr,"ERROR IN SLATERDET::RS_MUL_ADD ALLOCATING MEMORY FOR CTMP VECTOR\n");	  
+  	fflush(stderr);
+	exit(-1);
+  }
+  
   const int np012loc = ft.np012loc();
   const int mloc = c_.mloc();
   double* dcp = (double*) sdp.c().valptr();
@@ -483,7 +520,6 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
       #pragma omp parallel for
       for ( int i = 0; i < np012loc; i++ )
         tmp[i] *= v[i];
-
       ft.forward(&tmp[0], &ctmp[0]);
       int len = 2 * mloc;
       int inc1 = 1;
@@ -531,22 +567,180 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
  
 #endif
   if(execute){
-    for ( int n = 0; n < nstloc(); n++ )
+//CONSTRAINT: NUMBER OF NBATCHES MUST BE A DIVISOR OF nstloc(). The reason is the FFT Plan creation, where we set the number of batches and the data layout. 
+
+
+
+#if OPTIMIZE_GPU
+    assert((nstloc()%FourierTransform::get_nbatches())==0);
+    const int iters = (nstloc()+FourierTransform::get_nbatches()-1)/(FourierTransform::get_nbatches());
+    
+  /*  chrono::steady_clock::time_point start, end;
+    if(counter==3)
+    	start=std::chrono::steady_clock::now(); 
+*/
+    const complex<double>*aux=c_.cvalptr(0);
+    #pragma omp parallel for
+    for(int i=0; i<mloc*nstloc(); i++)
+                buffer_elem[i]=c_[i];
+
+/*
+double times1=0;
+double times2=0;
+double times3=0;
+chrono::steady_clock::time_point start, end;
+*/
+
+    for ( int n = 0; n < iters; n++ )
     {
-      ft.backward(c_.cvalptr(n*mloc),&tmp[0]);
+	auto stream = FourierTransform::get_cuda_streams(n%nstreams); 
+	const int nbatches = ((n+1)*FourierTransform::get_nbatches()<nstloc())?FourierTransform::get_nbatches():nstloc()-n*FourierTransform::get_nbatches();    
 
-      #pragma omp parallel for
-      for ( int i = 0; i < np012loc; i++ )
-        tmp[i] *= v[i];
 
-      ft.forward(&tmp[0], &ctmp[0]);
-      int len = 2 * mloc;
-      int inc1 = 1;
-      double alpha = 1.0;
-      daxpy(&len,&alpha,(double*)&ctmp[0],&inc1,&dcp[2*n*mloc],&inc1);
+//		start=std::chrono::steady_clock::now();
+
+	ft.backward(&buffer_elem[n*mloc*FourierTransform::get_nbatches()],/*&tmp[n* np012loc *FourierTransform::get_nbatches()]*/ NULL, stream, true, false, n*FourierTransform::get_nbatches(), nbatches);
+/*		end=std::chrono::steady_clock::now();
+		times1+=std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+		start=std::chrono::steady_clock::now();
+*/
+
+		cuPairwise(v,ft.get_f_device()+2*n*FourierTransform::get_nbatches()*np012loc,np012loc, stream, nbatches); 	
+/*                end=std::chrono::steady_clock::now();
+                times2+=std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+                start=std::chrono::steady_clock::now();
+  */      
+	ft.forward(NULL, &ctmp[n*FourierTransform::get_nbatches()*mloc],stream,false, true,n*FourierTransform::get_nbatches(), nbatches);
+	//TODO in new branch. Call daxpy with streams. For that, dcp_device must be transferred and consistently keep updated
+    /*            end=std::chrono::steady_clock::now();
+                times3+=std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+        */
+     }
+    /*
+     if(counter==0){
+        if(!MPIdata::rank()){
+                std::cout<<"GPUbackward: "<< times1/iters <<std::endl;
+	        DFTuning::Executor::setTime(times1/iters,0,0); 
+		std::cout<<"GPUpair: "<< times2/iters <<std::endl;
+		DFTuning::Executor::setTime(times2/iters,1,0);
+		std::cout<<"GPUforward: "<< times3/iters <<std::endl;
+		DFTuning::Executor::setTime(times3/iters,2,0);
+    	}
+	char hostname[255];
+    	int hostname_len;
+	MPI_Get_processor_name(hostname, &hostname_len);
+	std::cout << "MPI Rank: " << MPIdata::rank() << " on Node: " << hostname << std::endl;
+     }
+     */
+ 
+    //TODO: If we want to optimize the use of memory: Add another nested loop such that For (iters) for(nstreams). In such case, all data vectors size (device and host) would be multiplied by *number_streams instead of *number_of_bands 
+     for (int n=0;n<iters;n++)
+     {
+	auto stream = FourierTransform::get_cuda_streams(n%nstreams);
+	cudaStreamSynchronize(stream);
+	const int nbatches = ((n+1)*FourierTransform::get_nbatches()<nstloc())?FourierTransform::get_nbatches():nstloc()-n*FourierTransform::get_nbatches();
+     	for(int i=0;i<nbatches;i++)
+     	{
+		double* ctmpd = (double*) ctmp;
+		double* dcpd = (double*) dcp;
+		int len = 2 * mloc;
+        	int inc1 = 1;
+        	double alpha = 1.0;
+        	//cublasDaxpy(FourierTransform::get_cublasHandle(), len, &alpha, ft.get_c_device(), inc1, &dcp_device[2*n*mloc], inc1)
+		daxpy(&len,&alpha,&ctmpd[n*FourierTransform::get_nbatches()*2*mloc+i*2*mloc],&inc1,&dcpd[2*n*mloc*FourierTransform::get_nbatches()+i*2*mloc],&inc1);
+  	}
+      }
+
+
+/*
+if(counter==3){
+    end=std::chrono::steady_clock::now();
+    MPI_Barrier(MPIdata::comm());
+	if(!MPIdata::rank()){
+		std::cout<<"The GPU execution took "<<std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() <<std::endl;  
+	}
+}
+*/
+
+	
+
+#else
+  /*  chrono::steady_clock::time_point start, end;   
+    if(counter==3)
+    	start=chrono::steady_clock::now();
+*/
+    for (int n=0; n< nstloc();n++)
+    {
+	    ft.backward(c_.cvalptr(n*mloc),&tmp[0],0,true,true,true);
+	    
+	    #pragma omp parallel for
+	    for ( int i = 0; i < np012loc; i++ )
+         	tmp[i] *= v[i];
+	    ft.forward(&tmp[0], &ctmp[0]);
+	    int len = 2 * mloc;
+	    int inc1 = 1;
+	    double alpha = 1.0;
+	    
+	    daxpy(&len,&alpha,(double*)&ctmp[0],&inc1,&dcp[2*n*mloc],&inc1);
+	    
+
+	    /*
+	    std::cout << std::fixed;
+    	    std::cout << std::setprecision(16);
+	    if(!MPIdata::rank()){
+               if(n==1)
+		 {
+		 for (int i=0;i<mloc;i++)
+			std::cout <<n<<";"<<i<<";"<<ctmp[i].real()<<";"<<ctmp[i].imag()<<std::endl;	    
+	         } 
+	    }
+	    */
     }
+/*
+    if(counter==3){
+    	end=std::chrono::steady_clock::now();
+    	MPI_Barrier(MPIdata::comm());
+	if(!MPIdata::rank())
+		std::cout<<"The CPU execution took "<<std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() <<std::endl;        
     }
-  }
+*/
+#endif
+
+   }
+ }
+  free(tmp);
+#if OPTIMIZE_GPU
+  cudaFreeHost(ctmp);
+  cudaFreeHost(buffer_elem);
+#else
+  free(ctmp);
+#endif
+ 
+/*
+if(!MPIdata::rank())
+{
+        std::cout << std::fixed;
+        std::cout << std::setprecision(16);
+        for(int j=0;j<2;j++)
+        {
+                for (int i=0;i<100;i++)
+                        std::cout <<j<<";"<<i<<";"<<dcp[j*2*mloc+i]<<"\n";
+                        
+        }
+        fflush(stdout);
+}
+*/
+
+/*
+if(counter==3){
+MPI_Barrier(MPIdata::comm());
+exit(-1);
+}
+
+counter++;
+*/
+
+
 
 }
 

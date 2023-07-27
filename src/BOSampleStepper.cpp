@@ -1214,7 +1214,7 @@ void BOSampleStepper::step(int niter)
       {
         tmap["charge"].start();
         cd_.update_density();
-        tmap["charge"].stop();
+	tmap["charge"].stop();
 
         tmap["update_vhxc"].start();
         ef_.update_vhxc(compute_stress);
@@ -1342,7 +1342,6 @@ void BOSampleStepper::step(int niter)
     tmap["charge"].start();
     cd_.update_density();
     tmap["charge"].stop();
-
     tmap["update_vhxc"].start();
     ef_.update_vhxc(compute_stress);
     tmap["update_vhxc"].stop();
@@ -1408,7 +1407,6 @@ void BOSampleStepper::step(int niter)
     tmap["charge"].start();
     cd_.update_density();
     tmap["charge"].stop();
-
     tmap["update_vhxc"].start();
     ef_.update_vhxc(compute_stress);
     tmap["update_vhxc"].stop();

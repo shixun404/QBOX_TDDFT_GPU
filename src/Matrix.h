@@ -23,6 +23,8 @@
 
 #include "Context.h"
 
+
+
 #include <valarray>
 #include <complex>
 #include <cstring> // memcpy
@@ -414,6 +416,7 @@ class ComplexMatrix
       if ( size_ == old_size ) return;
       delete[] val;
       val = new std::complex<double>[size_];
+      
       clear();
     }
 
@@ -447,7 +450,9 @@ class ComplexMatrix
 
     ~ComplexMatrix(void)
     {
-      if ( !reference_ ) delete[] val;
+      if ( !reference_ ){ 
+      	delete[] val;
+      }
     }
 
     ComplexMatrix& operator=(const ComplexMatrix& a);
