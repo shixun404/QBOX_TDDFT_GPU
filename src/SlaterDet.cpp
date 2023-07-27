@@ -28,6 +28,9 @@
 #include "device_basis_mapping.h"
 #include <omp.h>
 #endif
+#include "Executor.hpp"
+#include <mpi.h>
+
 #include <chrono> //TODO: Remove
 #include <cstdlib>
 #include <cstring> // memcpy
@@ -452,7 +455,7 @@ void SlaterDet::compute_tau(FourierTransform& ft,
   }
 }
 
-//int SlaterDet::counter=0;
+int SlaterDet::counter=0;
 
 ////////////////////////////////////////////////////////////////////////////////
 void SlaterDet::rs_mul_add(FourierTransform& ft,
@@ -579,19 +582,51 @@ void SlaterDet::rs_mul_add(FourierTransform& ft,
     for(int i=0; i<mloc*nstloc(); i++)
                 buffer_elem[i]=c_[i];
 
+
+double times1=0;
+double times2=0;
+double times3=0;
+chrono::steady_clock::time_point start, end;
+
     for ( int n = 0; n < iters; n++ )
     {
 	auto stream = FourierTransform::get_cuda_streams(n%nstreams); 
 	const int nbatches = ((n+1)*FourierTransform::get_nbatches()<nstloc())?FourierTransform::get_nbatches():nstloc()-n*FourierTransform::get_nbatches();    
-	
+
+		start=std::chrono::steady_clock::now();
+
 	ft.backward(&buffer_elem[n*mloc*FourierTransform::get_nbatches()],/*&tmp[n* np012loc *FourierTransform::get_nbatches()]*/ NULL, stream, true, false, n*FourierTransform::get_nbatches(), nbatches);
-        cuPairwise(v,ft.get_f_device()+2*n*FourierTransform::get_nbatches()*np012loc,np012loc, stream, nbatches); 	
+		end=std::chrono::steady_clock::now();
+		times1+=std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+		start=std::chrono::steady_clock::now();
+		
+		cuPairwise(v,ft.get_f_device()+2*n*FourierTransform::get_nbatches()*np012loc,np012loc, stream, nbatches); 	
+                end=std::chrono::steady_clock::now();
+                times2+=std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+                start=std::chrono::steady_clock::now();
+        
 	ft.forward(NULL, &ctmp[n*FourierTransform::get_nbatches()*mloc],stream,false, true,n*FourierTransform::get_nbatches(), nbatches);
 	//TODO in new branch. Call daxpy with streams. For that, dcp_device must be transferred and consistently keep updated
-
+                end=std::chrono::steady_clock::now();
+                times3+=std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+        
      }
-
-
+    
+     if(counter==0){
+        if(!MPIdata::rank()){
+                std::cout<<"GPUbackward: "<< times1/iters <<std::endl;
+	        DFTuning::Executor::setTime(times1/iters,0,0); 
+		std::cout<<"GPUpair: "<< times2/iters <<std::endl;
+		DFTuning::Executor::setTime(times2/iters,1,0);
+		std::cout<<"GPUforward: "<< times3/iters <<std::endl;
+		DFTuning::Executor::setTime(times3/iters,2,0);
+    	}
+	char hostname[255];
+    	int hostname_len;
+	MPI_Get_processor_name(hostname, &hostname_len);
+	std::cout << "MPI Rank: " << MPIdata::rank() << " on Node: " << hostname << std::endl;
+     }
+     
  
     //TODO: If we want to optimize the use of memory: Add another nested loop such that For (iters) for(nstreams). In such case, all data vectors size (device and host) would be multiplied by *number_streams instead of *number_of_bands 
      for (int n=0;n<iters;n++)
@@ -696,9 +731,9 @@ if(counter==3){
 MPI_Barrier(MPIdata::comm());
 exit(-1);
 }
-
-counter++;
 */
+counter++;
+
 
 
 

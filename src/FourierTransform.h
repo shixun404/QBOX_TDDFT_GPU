@@ -30,6 +30,8 @@
 #error "Cannot define USE_FFTW2 and USE_FFTW3"
 #endif
 
+
+
 #if USE_FFTW2
 #if USE_DFFTW
 #include "dfftw.h"
@@ -43,6 +45,11 @@
 #if USE_FFTW3MKL
 #include "fftw3_mkl.h"
 #endif
+#endif
+
+#if AUTOTUNER
+#include "utilities.hpp"
+
 #endif
 
 #if OPTIMIZE_GPU
@@ -63,9 +70,9 @@ class FourierTransform
 #if OPTIMIZE_GPU
   static int my_dev;
   static cudaStream_t* cuda_streams;
-  static const int nstreams =2; //THIS IS A PERFORMANCE PARAMETER
+  static int nstreams; //THIS IS A PERFORMANCE PARAMETER
   //static cublasHandle_t handle;
-  static const int nbatches=4; //THISIS A PERFORMANCE PARAMETER
+  static int nbatches; //THISIS A PERFORMANCE PARAMETER
   double * c_device;
   double * zvec_device;
   double * f_device;
@@ -142,6 +149,18 @@ class FourierTransform
 
   
 #if OPTIMIZE_GPU 
+
+    static void initializeConst() {
+#if AUTOTUNER
+	nstreams=atoi(DFTuning::getEnv("QBOX_NSTREAMS"));
+	nbatches=atoi(DFTuning::getEnv("QBOX_NBATCHES"));
+#else
+   	nstreams=2;
+	nbatches=4;	
+#endif
+  }
+
+
   static cudaStream_t& get_cuda_streams(int i){return cuda_streams[i];}
   static int get_nstreams(){return nstreams;}
   static int get_my_dev(){return my_dev;}

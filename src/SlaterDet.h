@@ -45,7 +45,7 @@ class SlaterDet
   void byteswap_double(size_t n, double* x);
   double fermi(double e, double mu, double fermitemp);
 
-  //static int counter; //TODO: Delete - ADRIAN
+  static int counter; //TODO: Delete - ADRIAN
 
   public:
 

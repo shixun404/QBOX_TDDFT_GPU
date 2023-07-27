@@ -148,6 +148,8 @@ int RTTDCmd::action(int argc, char **argv)
 
 //ADRIAN ADDED JUST FOR TESTING
 //exit(-1);
+return 0;
+
 
   if ( s->wfv != 0) delete s->wfv;
   s->wfv = 0;
