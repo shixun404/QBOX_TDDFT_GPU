@@ -1,0 +1,1245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fpmd:simulation xmlns:fpmd="http://www.quantum-simulation.org/ns/fpmd/fpmd-1.0">
+
+                   ============================
+                   I qbox rel1_74_1           I
+                   I                          I
+                   I                          I
+                   I                          I
+                   I                          I
+                   I                          I
+                   I                          I
+                   I                          I
+                   I                          I
+                   I                          I
+                   I                          I
+                   I                          I
+                   I http://qboxcode.org      I
+                   ============================
+
+
+<release> rel1_74_1 perlmutter  </release>
+<user> sliu424 </user>
+<sysname> Linux </sysname>
+<nodename> nid001408 </nodename>
+<start_time> 2025-02-14T03:17:45Z </start_time>
+ MPIdata::comm: 1x8x1x1
+<mpi_processes count="8">
+<process id="0"> nid001408 </process> (0,0,0,0)
+<process id="1"> nid001408 </process> (0,1,0,0)
+<process id="2"> nid001408 </process> (0,2,0,0)
+<process id="3"> nid001408 </process> (0,3,0,0)
+<process id="4"> nid001408 </process> (0,4,0,0)
+<process id="5"> nid001408 </process> (0,5,0,0)
+<process id="6"> nid001408 </process> (0,6,0,0)
+<process id="7"> nid001408 </process> (0,7,0,0)
+</mpi_processes>
+<omp_max_threads> 1 </omp_max_threads>
+[qbox] <cmd># H2 ground state</cmd>
+[qbox] <cmd>species carbon    C_ONCV_PBE-1.2.xml</cmd>
+  SpeciesCmd: defining species carbon as C_ONCV_PBE-1.2.xml
+
+ species carbon:
+<species name="carbon">
+ <description>
+
+ C_ONCV_PBE-1.2
+
+ This pseudopotential file has been produced using the code
+ ONCVPSP  (Optimized Norm-Conservinng Vanderbilt PSeudopotential)
+ scalar-relativistic version 2.1.1, 03/26/2014 by D. R. Hamann
+ The code is available through a link at URL www.mat-simresearch.com.
+ Documentation with the package provides a full discription of the
+ input data below.
+
+
+ While it is not required under the terms of the GNU GPL, it is
+ suggested that you cite D. R. Hamann, Phys. Rev. B 88, 085117 (2013)
+ in any publication using these pseudopotentials.
+
+
+ Copyright 2015 The Regents of the University of California
+ 
+ This work is licensed under the Creative Commons Attribution-ShareAlike 
+ 4.0 International License. To view a copy of this license, visit 
+ http://creativecommons.org/licenses/by-sa/4.0/ or send a letter to 
+ Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+ 
+ This pseudopotential is part of the Schlipf-Gygi norm-conserving 
+ pseudopotential library. Its construction parameters were tuned to 
+ reproduce materials of a training set with very high accuracy and 
+ should be suitable as a general purpose pseudopotential to treat a 
+ variety of different compounds. For details of the construction and 
+ testing of the pseudopotential please refer to:
+ 
+ M. Schlipf, F. Gygi, Comp. Phys. Comm. 196, 36 (2015)
+ http://dx.doi.org/10.1016/j.cpc.2015.05.011
+ 
+ We kindly ask that you include this reference in all publications 
+ associated to this pseudopotential.
+
+
+Input file for PP generation:
+
+# ATOM AND REFERENCE CONFIGURATION
+# atsym  z    nc    nv    iexc   psfile
+  C  6.00     1     2     4      fpmd
+#
+#   n    l    f        energy (Ha)
+    1    0    2.00
+    2    0    2.00
+    2    1    2.00
+#
+# PSEUDOPOTENTIAL AND OPTIMIZATION
+# lmax
+    1
+#
+#   l,   rc,     ep,   ncon, nbas, qcut
+    0   1.42330  -0.50533    5    8   6.97628
+    1   1.38975  -0.19424    5    8   8.59046
+#
+# LOCAL POTENTIAL
+# lloc, lpopt,  rc(5),   dvloc0
+    4    5   0.82223      0.00000
+#
+# VANDERBILT-KLEINMAN-BYLANDER PROJECTORs
+# l, nproj, debl
+    0    2   1.09624
+    1    2   1.27170
+#
+# MODEL CORE CHARGE
+# icmod, fcfact
+    0   0.00000
+#
+# LOG DERIVATIVE ANALYSIS
+# epsh1, epsh2, depsh
+   -5.00    3.00    0.02
+#
+# OUTPUT GRID
+# rlmax, drl
+    6.00    0.01
+#
+# TEST CONFIGURATIONS
+# ncnf
+    0
+# nvcnf
+#   n    l    f
+ </description>
+ <symbol>C</symbol>
+ <atomic_number>6</atomic_number>
+ <mass>12.011</mass>
+ <norm_conserving_semilocal_pseudopotential>
+ <valence_charge>4</valence_charge>
+ <mesh_spacing>0.01</mesh_spacing>
+ </norm_conserving_semilocal_pseudopotential>
+</species>
+ SLPP semilocal potential
+ rcps_ =   1.5
+[qbox] <cmd>species nitrogen  N_ONCV_PBE-1.2.xml</cmd>
+  SpeciesCmd: defining species nitrogen as N_ONCV_PBE-1.2.xml
+
+ species nitrogen:
+<species name="nitrogen">
+ <description>
+
+ N_ONCV_PBE-1.2
+
+ This pseudopotential file has been produced using the code
+ ONCVPSP  (Optimized Norm-Conservinng Vanderbilt PSeudopotential)
+ scalar-relativistic version 2.1.1, 03/26/2014 by D. R. Hamann
+ The code is available through a link at URL www.mat-simresearch.com.
+ Documentation with the package provides a full discription of the
+ input data below.
+
+
+ While it is not required under the terms of the GNU GPL, it is
+ suggested that you cite D. R. Hamann, Phys. Rev. B 88, 085117 (2013)
+ in any publication using these pseudopotentials.
+
+
+ Copyright 2015 The Regents of the University of California
+ 
+ This work is licensed under the Creative Commons Attribution-ShareAlike 
+ 4.0 International License. To view a copy of this license, visit 
+ http://creativecommons.org/licenses/by-sa/4.0/ or send a letter to 
+ Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+ 
+ This pseudopotential is part of the Schlipf-Gygi norm-conserving 
+ pseudopotential library. Its construction parameters were tuned to 
+ reproduce materials of a training set with very high accuracy and 
+ should be suitable as a general purpose pseudopotential to treat a 
+ variety of different compounds. For details of the construction and 
+ testing of the pseudopotential please refer to:
+ 
+ M. Schlipf, F. Gygi, Comp. Phys. Comm. 196, 36 (2015)
+ http://dx.doi.org/10.1016/j.cpc.2015.05.011
+ 
+ We kindly ask that you include this reference in all publications 
+ associated to this pseudopotential.
+
+
+Input file for PP generation:
+
+# ATOM AND REFERENCE CONFIGURATION
+# atsym  z    nc    nv    iexc   psfile
+  N  7.00     1     2     4      fpmd
+#
+#   n    l    f        energy (Ha)
+    1    0    2.00
+    2    0    2.00
+    2    1    3.00
+#
+# PSEUDOPOTENTIAL AND OPTIMIZATION
+# lmax
+    1
+#
+#   l,   rc,     ep,   ncon, nbas, qcut
+    0   1.60510  -0.68291    5    8   8.23432
+    1   1.51217  -0.26055    5    8   9.22597
+#
+# LOCAL POTENTIAL
+# lloc, lpopt,  rc(5),   dvloc0
+    4    5   1.10894      0.00000
+#
+# VANDERBILT-KLEINMAN-BYLANDER PROJECTORs
+# l, nproj, debl
+    0    2   2.24547
+    1    2   2.62189
+#
+# MODEL CORE CHARGE
+# icmod, fcfact
+    0   0.00000
+#
+# LOG DERIVATIVE ANALYSIS
+# epsh1, epsh2, depsh
+   -5.00    3.00    0.02
+#
+# OUTPUT GRID
+# rlmax, drl
+    6.00    0.01
+#
+# TEST CONFIGURATIONS
+# ncnf
+    0
+# nvcnf
+#   n    l    f
+ </description>
+ <symbol>N</symbol>
+ <atomic_number>7</atomic_number>
+ <mass>14.007</mass>
+ <norm_conserving_semilocal_pseudopotential>
+ <valence_charge>5</valence_charge>
+ <mesh_spacing>0.01</mesh_spacing>
+ </norm_conserving_semilocal_pseudopotential>
+</species>
+ SLPP semilocal potential
+ rcps_ =   1.5
+[qbox] <cmd>species hydrogen  H_ONCV_PBE-1.2.xml</cmd>
+  SpeciesCmd: defining species hydrogen as H_ONCV_PBE-1.2.xml
+
+ species hydrogen:
+<species name="hydrogen">
+ <description>
+
+ H_ONCV_PBE-1.2
+
+ This pseudopotential file has been produced using the code
+ ONCVPSP  (Optimized Norm-Conservinng Vanderbilt PSeudopotential)
+ scalar-relativistic version 2.1.1, 03/26/2014 by D. R. Hamann
+ The code is available through a link at URL www.mat-simresearch.com.
+ Documentation with the package provides a full discription of the
+ input data below.
+
+
+ While it is not required under the terms of the GNU GPL, it is
+ suggested that you cite D. R. Hamann, Phys. Rev. B 88, 085117 (2013)
+ in any publication using these pseudopotentials.
+
+
+ Copyright 2015 The Regents of the University of California
+ 
+ This work is licensed under the Creative Commons Attribution-ShareAlike 
+ 4.0 International License. To view a copy of this license, visit 
+ http://creativecommons.org/licenses/by-sa/4.0/ or send a letter to 
+ Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+ 
+ This pseudopotential is part of the Schlipf-Gygi norm-conserving 
+ pseudopotential library. Its construction parameters were tuned to 
+ reproduce materials of a training set with very high accuracy and 
+ should be suitable as a general purpose pseudopotential to treat a 
+ variety of different compounds. For details of the construction and 
+ testing of the pseudopotential please refer to:
+ 
+ M. Schlipf, F. Gygi, Comp. Phys. Comm. 196, 36 (2015)
+ http://dx.doi.org/10.1016/j.cpc.2015.05.011
+ 
+ We kindly ask that you include this reference in all publications 
+ associated to this pseudopotential.
+
+
+Input file for PP generation:
+
+# ATOM AND REFERENCE CONFIGURATION
+# atsym  z    nc    nv    iexc   psfile
+  H  1.00     0     1     4      fpmd
+#
+#   n    l    f        energy (Ha)
+    1    0    1.00
+#
+# PSEUDOPOTENTIAL AND OPTIMIZATION
+# lmax
+    0
+#
+#   l,   rc,     ep,   ncon, nbas, qcut
+    0   1.13748  -0.23860    5    8   9.72141
+#
+# LOCAL POTENTIAL
+# lloc, lpopt,  rc(5),   dvloc0
+    4    5   0.49352      0.00000
+#
+# VANDERBILT-KLEINMAN-BYLANDER PROJECTORs
+# l, nproj, debl
+    0    2   1.27464
+#
+# MODEL CORE CHARGE
+# icmod, fcfact
+    0   0.00000
+#
+# LOG DERIVATIVE ANALYSIS
+# epsh1, epsh2, depsh
+   -5.00    3.00    0.02
+#
+# OUTPUT GRID
+# rlmax, drl
+    6.00    0.01
+#
+# TEST CONFIGURATIONS
+# ncnf
+    0
+# nvcnf
+#   n    l    f
+ </description>
+ <symbol>H</symbol>
+ <atomic_number>1</atomic_number>
+ <mass>1.008</mass>
+ <norm_conserving_semilocal_pseudopotential>
+ <valence_charge>1</valence_charge>
+ <mesh_spacing>0.01</mesh_spacing>
+ </norm_conserving_semilocal_pseudopotential>
+</species>
+ SLPP semilocal potential
+ rcps_ =   1.5
+[qbox] <cmd>species magnesium Mg_ONCV_PBE-1.2.xml</cmd>
+  SpeciesCmd: defining species magnesium as Mg_ONCV_PBE-1.2.xml
+
+ species magnesium:
+<species name="magnesium">
+ <description>
+
+ Mg_ONCV_PBE-1.2
+
+ This pseudopotential file has been produced using the code
+ ONCVPSP  (Optimized Norm-Conservinng Vanderbilt PSeudopotential)
+ scalar-relativistic version 2.1.1, 03/26/2014 by D. R. Hamann
+ The code is available through a link at URL www.mat-simresearch.com.
+ Documentation with the package provides a full discription of the
+ input data below.
+
+
+ While it is not required under the terms of the GNU GPL, it is
+ suggested that you cite D. R. Hamann, Phys. Rev. B 88, 085117 (2013)
+ in any publication using these pseudopotentials.
+
+
+ Copyright 2015 The Regents of the University of California
+ 
+ This work is licensed under the Creative Commons Attribution-ShareAlike 
+ 4.0 International License. To view a copy of this license, visit 
+ http://creativecommons.org/licenses/by-sa/4.0/ or send a letter to 
+ Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+ 
+ This pseudopotential is part of the Schlipf-Gygi norm-conserving 
+ pseudopotential library. Its construction parameters were tuned to 
+ reproduce materials of a training set with very high accuracy and 
+ should be suitable as a general purpose pseudopotential to treat a 
+ variety of different compounds. For details of the construction and 
+ testing of the pseudopotential please refer to:
+ 
+ M. Schlipf, F. Gygi, Comp. Phys. Comm. 196, 36 (2015)
+ http://dx.doi.org/10.1016/j.cpc.2015.05.011
+ 
+ We kindly ask that you include this reference in all publications 
+ associated to this pseudopotential.
+
+
+Input file for PP generation:
+
+# ATOM AND REFERENCE CONFIGURATION
+# atsym  z    nc    nv    iexc   psfile
+  Mg 12.00     1     3     4      fpmd
+#
+#   n    l    f        energy (Ha)
+    1    0    2.00
+    2    0    2.00
+    2    1    6.00
+    3    0    2.00
+#
+# PSEUDOPOTENTIAL AND OPTIMIZATION
+# lmax
+    1
+#
+#   l,   rc,     ep,   ncon, nbas, qcut
+    0   1.23189  -2.93427    5    8  10.54420
+    1   2.49013  -1.71303    5    8   6.93037
+#
+# LOCAL POTENTIAL
+# lloc, lpopt,  rc(5),   dvloc0
+    4    5   0.86130      0.00000
+#
+# VANDERBILT-KLEINMAN-BYLANDER PROJECTORs
+# l, nproj, debl
+    0    2   2.76134
+    1    2   1.66415
+#
+# MODEL CORE CHARGE
+# icmod, fcfact
+    0   0.00000
+#
+# LOG DERIVATIVE ANALYSIS
+# epsh1, epsh2, depsh
+   -5.00    3.00    0.02
+#
+# OUTPUT GRID
+# rlmax, drl
+    6.00    0.01
+#
+# TEST CONFIGURATIONS
+# ncnf
+    0
+# nvcnf
+#   n    l    f
+ </description>
+ <symbol>Mg</symbol>
+ <atomic_number>12</atomic_number>
+ <mass>24.305</mass>
+ <norm_conserving_semilocal_pseudopotential>
+ <valence_charge>10</valence_charge>
+ <mesh_spacing>0.01</mesh_spacing>
+ </norm_conserving_semilocal_pseudopotential>
+</species>
+ SLPP semilocal potential
+ rcps_ =   1.5
+[qbox] <cmd>atom PO01 carbon        12.295290480     18.897093760      9.448660640</cmd>
+[qbox] <cmd>atom PO02 carbon        18.897525160     12.295341000      9.448587470</cmd>
+[qbox] <cmd>atom PO03 carbon        25.499430610     18.897218120      9.448647830</cmd>
+[qbox] <cmd>atom PO04 carbon        18.897260600     25.499619080      9.448713850</cmd>
+[qbox] <cmd>atom PO05 carbon        16.445211350     24.150055410      9.448686920</cmd>
+[qbox] <cmd>atom PO06 carbon        13.645024700     21.349204390      9.448695610</cmd>
+[qbox] <cmd>atom PO07 carbon        13.644676170     16.445237260      9.448653500</cmd>
+[qbox] <cmd>atom PO08 carbon        16.445039790     13.644914940      9.448609360</cmd>
+[qbox] <cmd>atom PO09 carbon        21.349841000     24.150052500      9.448748840</cmd>
+[qbox] <cmd>atom PO10 carbon        24.149228390     21.349708820      9.448675550</cmd>
+[qbox] <cmd>atom PO11 carbon        24.149652240     16.445147470      9.448685650</cmd>
+[qbox] <cmd>atom PO12 carbon        21.348849460     13.644902960      9.448620490</cmd>
+[qbox] <cmd>atom PO13 carbon        13.973635730     25.447320190      9.448646020</cmd>
+[qbox] <cmd>atom PO14 carbon        12.347186870     23.820826440      9.448671340</cmd>
+[qbox] <cmd>atom PO15 carbon        12.347380580     13.973726190      9.448581220</cmd>
+[qbox] <cmd>atom PO16 carbon        13.973891490     12.347415910      9.448572870</cmd>
+[qbox] <cmd>atom PO17 carbon        23.820871230     12.347053450      9.448623840</cmd>
+[qbox] <cmd>atom PO18 carbon        25.447282260     13.973589980      9.448678510</cmd>
+[qbox] <cmd>atom PO19 carbon        23.820753290     25.446751330      9.448696670</cmd>
+[qbox] <cmd>atom PO20 carbon        25.446710240     23.820950460      9.448654100</cmd>
+[qbox] <cmd>atom PO21 nitrogen      21.912127840     15.882123080      9.448674610</cmd>
+[qbox] <cmd>atom PO22 nitrogen      15.882406850     15.882074730      9.448700140</cmd>
+[qbox] <cmd>atom PO23 nitrogen      15.881989280     21.911911340      9.448703170</cmd>
+[qbox] <cmd>atom PO24 nitrogen      21.912902430     21.912265810      9.448754630</cmd>
+[qbox] <cmd>atom PO25 hydrogen      13.900348670     27.147850400      9.448642850</cmd>
+[qbox] <cmd>atom PO26 hydrogen      10.646640500     23.894114400      9.448663540</cmd>
+[qbox] <cmd>atom PO27 hydrogen      10.646619950     13.900360330      9.448569370</cmd>
+[qbox] <cmd>atom PO28 hydrogen      13.900400420     10.646650940      9.448589170</cmd>
+[qbox] <cmd>atom PO29 hydrogen      23.894132280     10.646591480      9.448584560</cmd>
+[qbox] <cmd>atom PO30 hydrogen      27.147935490     13.900318660      9.448679850</cmd>
+[qbox] <cmd>atom PO31 hydrogen      23.894155210     27.147828190      9.448678990</cmd>
+[qbox] <cmd>atom PO32 hydrogen      27.147876750     23.894199170      9.448618450</cmd>
+[qbox] <cmd>atom PO33 hydrogen      10.721442140     18.897212650      9.448619450</cmd>
+[qbox] <cmd>atom PO34 hydrogen      18.897297220     10.721494060      9.448613300</cmd>
+[qbox] <cmd>atom PO35 hydrogen      27.073118760     18.897253290      9.448631500</cmd>
+[qbox] <cmd>atom PO36 hydrogen      18.897284520     27.073099380      9.448707390</cmd>
+[qbox] <cmd>atom PO37 magnesium     18.897259890     18.897259890      9.448629940</cmd>
+[qbox] <cmd>constraint define position center PO37</cmd>
+[qbox] <cmd>set cell           37.794522492515401767318347296384     0.00000000000000     0.00000000000000        0.00000000000000     37.794522492515401767318347296384      0.00000000000000       0.00000000000000     0.00000000000000     37.794522492515401767318347296384</cmd>
+<unit_cell 
+    a=" 37.79452249   0.00000000   0.00000000"
+    b="  0.00000000  37.79452249   0.00000000"
+    c="  0.00000000   0.00000000  37.79452249" />
+[qbox] <cmd>set ecut 50</cmd>
+[qbox] <cmd>set ecutprec 40</cmd>
+[qbox] <cmd>#kpoint delete 0 0 0</cmd>
+[qbox] <cmd># X point</cmd>
+[qbox] <cmd>#kpoint add  0.5  0.5  0.5   1.000</cmd>
+[qbox] <cmd>#set cell_dyn CG</cmd>
+[qbox] <cmd>#set atoms_dyn CG</cmd>
+[qbox] <cmd>set wf_diag T</cmd>
+[qbox] <cmd>set wf_dyn PSDA</cmd>
+[qbox] <cmd>set xc PBE</cmd>
+[qbox] <cmd>#set nspin 1</cmd>
+[qbox] <cmd>set scf_tol 1.e-8</cmd>
+[qbox] <cmd>#set charge_mix_coeff 0.0</cmd>
+[qbox] <cmd>#set charge_mix_rcut 0.0</cmd>
+[qbox] <cmd>set atoms_dyn CG</cmd>
+[qbox] <cmd>randomize_wf</cmd>
+[qbox] <cmd>set nempty 3</cmd>
+[qbox] <cmd>#set atoms_dyn CG</cmd>
+[qbox] <cmd>#load gs.xml</cmd>
+[qbox] <cmd>#run -atomic_density 100 300 100</cmd>
+[qbox] <cmd>#save gs.xml</cmd>
+[qbox] <cmd>#load gs.xml</cmd>
+[qbox] <cmd>set rt_propagator CN</cmd>
+[qbox] <cmd>#set rt_md OFF</cmd>
+[qbox] <cmd>set rt_dt 0.02</cmd>
+[qbox] <cmd>set rt_scf_tol 1.0e-15</cmd>
+[qbox] <cmd>set rt_rho_tol 1.0e-15</cmd>
+[qbox] <cmd>#set rt_vp ON</cmd>
+[qbox] <cmd>#set rt_vp_ind F</cmd>
+[qbox] <cmd>#set rt_vp_eq DELTA</cmd>
+[qbox] <cmd>#set rt_vp_amp 0.0001 0.00 0.00</cmd>
+[qbox] <cmd>###set rt_vp_freq 0.001</cmd>
+[qbox] <cmd>#set rt_vp_sigma</cmd>
+[qbox] <cmd>#set rt_vp_gauss</cmd>
+[qbox] <cmd>#set rt_vp_length</cmd>
+[qbox] <cmd>#set rt_vp_delay</cmd>
+[qbox] <cmd>#set rt_delta_kick ON</cmd>
+[qbox] <cmd>#set rt_delta_kick_amp 0.0 0.0 0.001</cmd>
+[qbox] <cmd>rttd 2 -auto-save 2 5 10</cmd>
+ RTTDCmd : 2 | 5 | 10 | 2
+ EnergyFunctional: <np0v> 180 </np0v>  <np1v> 180 </np1v>  <np2v> 180 </np2v>
+ EnergyFunctional: vft->np012(): 5832000
+<wavefunction ecut="25.00000000" nspin="1" nel="122" nempty="3">
+<cell a="37.794522 0.000000 0.000000"
+      b="0.000000 37.794522 0.000000"
+      c="0.000000 0.000000 37.794522"/>
+ reciprocal lattice vectors
+ 0.166246 0.000000 0.000000
+ 0.000000 0.166246 0.000000
+ 0.000000 0.000000 0.166246
+<refcell a="0.000000 0.000000 0.000000"
+         b="0.000000 0.000000 0.000000"
+         c="0.000000 0.000000 0.000000"/>
+<grid nx="88" ny="88" nz="88"/>
+<slater_determinant kpoint="0 0 0" size="64">
+ sdcontext: 1x8
+ basis size: 322453
+ c dimensions: 322453x64   (322453x8 blocks)
+ <density_matrix form="diagonal" size="64"/>
+</slater_determinant>
+</wavefunction>
+<net_charge> 0 </net_charge>
+<iteration count="1">
+  BOSampleStepper: start scf iteration
+  <electronic_charge ispin="0"> 122.00000000 </electronic_charge>
+  <eigenvalue_sum>  873.63941139 </eigenvalue_sum>
+  <eigenvalue_sum>  726.74947772 </eigenvalue_sum>
+  <eigenvalue_sum>  576.06883565 </eigenvalue_sum>
+  <eigenvalue_sum>  433.87106414 </eigenvalue_sum>
+  <eigenvalue_sum>  249.99231765 </eigenvalue_sum>
+  <eigenvalue_sum>  155.64896849 </eigenvalue_sum>
+  <eigenvalue_sum>  107.27188469 </eigenvalue_sum>
+  <eigenvalue_sum>  69.57520074 </eigenvalue_sum>
+  <eigenvalue_sum>  45.66513544 </eigenvalue_sum>
+  <eigenvalue_sum>  30.96705268 </eigenvalue_sum>
+<eigenset>
+  <eigenvalues spin="0" kpoint="0.00000000 0.00000000 0.00000000" weight="1.00000000" n="64">
+   -32.89273    -6.71969    -5.78899    -0.47766     0.19696
+     2.94497     3.06472     4.11895     5.05572     6.64541
+     7.45640     7.71055     7.91237     8.51904     8.65051
+     8.83621     8.99991     9.07108     9.19642     9.32302
+     9.35648     9.40921     9.53334     9.60587     9.65647
+     9.75975     9.77778     9.84179     9.91750     9.98354
+    10.08024    10.13340    10.19378    10.25521    10.31007
+    10.37575    10.44575    10.52973    10.56809    10.63206
+    10.65928    10.68599    10.78962    10.85592    10.91663
+    10.99935    11.11601    11.14783    11.21678    11.26668
+    11.33315    11.37444    11.47444    11.52685    11.57734
+    11.68147    11.75026    11.84075    11.94698    11.98083
+    12.19171    12.24158    12.32376    46.71721
+  </eigenvalues>
+</eigenset>
+  <etotal_int>     -67.22643908 </etotal_int>
+  BOSampleStepper: end scf iteration
+  BOSampleStepper: start scf iteration
+  <electronic_charge ispin="0"> 122.00000000 </electronic_charge>
+  <eigenvalue_sum>  16.36701322 </eigenvalue_sum>
+  <eigenvalue_sum>  13.14487204 </eigenvalue_sum>
+  <eigenvalue_sum>  4.90802319 </eigenvalue_sum>
+  <eigenvalue_sum>  0.01098096 </eigenvalue_sum>
+  <eigenvalue_sum>  -5.26797455 </eigenvalue_sum>
+  <eigenvalue_sum>  -9.71783392 </eigenvalue_sum>
+  <eigenvalue_sum>  -12.57771030 </eigenvalue_sum>
+  <eigenvalue_sum>  -13.59231556 </eigenvalue_sum>
+  <eigenvalue_sum>  -15.47054627 </eigenvalue_sum>
+  <eigenvalue_sum>  -17.35540718 </eigenvalue_sum>
+<eigenset>
+  <eigenvalues spin="0" kpoint="0.00000000 0.00000000 0.00000000" weight="1.00000000" n="64">
+  -183.76010   -79.90144   -66.72128   -62.15422   -46.63904
+   -43.01632   -38.81641   -29.34736   -20.40589   -12.51677
+    -8.28161    -7.32144    -5.78387    -4.32132    -4.14209
+    -3.27700    -2.78469    -1.22527    -0.82309    -0.57951
+    -0.34250    -0.05330     0.10782     0.47487     0.69629
+     0.75380     0.87313     0.99420     1.15586     1.21191
+     1.39817     1.50294     1.58783     1.72780     1.75813
+     1.82157     1.90392     1.97040     2.06796     2.16521
+     2.27439     2.35172     2.38627     2.43238     2.51390
+     2.61511     2.70708     2.74557     2.80852     2.87281
+     2.92932     2.98905     3.10454     3.13236     3.18322
+     3.28082     3.29580     3.34475     3.46048     3.49034
+     3.56258     3.61152     3.71513    24.55557
+  </eigenvalues>
+</eigenset>
+  <etotal_int>     -32.89045344 </etotal_int>
+  BOSampleStepper: end scf iteration
+  BOSampleStepper: start scf iteration
+  <electronic_charge ispin="0"> 122.00000000 </electronic_charge>
+  <eigenvalue_sum>  -27.55310537 </eigenvalue_sum>
+  <eigenvalue_sum>  -31.33736442 </eigenvalue_sum>
+  <eigenvalue_sum>  -35.29625342 </eigenvalue_sum>
+  <eigenvalue_sum>  -39.44076803 </eigenvalue_sum>
+  <eigenvalue_sum>  -43.78384733 </eigenvalue_sum>
+  <eigenvalue_sum>  -48.34239518 </eigenvalue_sum>
+  <eigenvalue_sum>  -53.13691593 </eigenvalue_sum>
+  <eigenvalue_sum>  -58.18950835 </eigenvalue_sum>
+  <eigenvalue_sum>  -63.52081487 </eigenvalue_sum>
+  <eigenvalue_sum>  -69.14657061 </eigenvalue_sum>
+<eigenset>
+  <eigenvalues spin="0" kpoint="0.00000000 0.00000000 0.00000000" weight="1.00000000" n="64">
+  -168.30600  -127.88771  -125.77055  -124.36359  -123.37530
+  -121.11542  -118.26358  -109.35033   -84.49753   -73.73888
+   -67.21428   -62.46838   -57.35486   -53.55386   -49.44887
+   -45.09517   -42.90393   -37.77389   -36.46051   -34.69743
+   -33.72495   -29.92007   -27.92471   -24.98629   -23.81227
+   -22.51484   -20.71735   -19.43256   -18.16214   -16.83628
+   -15.92968   -14.70496   -13.55645   -12.31683   -11.66644
+   -10.59131   -10.28810    -9.34715    -8.48351    -7.44401
+    -6.47218    -6.30058    -5.93452    -5.40097    -4.82620
+    -4.12010    -3.72296    -3.49557    -3.05765    -2.31884
+    -1.88878    -1.54837    -1.18386    -1.01773    -0.53497
+    -0.17468    -0.07560     0.39841     0.76232     0.92719
+     1.25823     1.40370     1.57346    18.85593
+  </eigenvalues>
+</eigenset>
+  <etotal_int>       8.37955631 </etotal_int>
+  BOSampleStepper: end scf iteration
+  BOSampleStepper: start scf iteration
+  <electronic_charge ispin="0"> 122.00000000 </electronic_charge>
+  <eigenvalue_sum>  -89.47926244 </eigenvalue_sum>
+  <eigenvalue_sum>  -99.45340322 </eigenvalue_sum>
+  <eigenvalue_sum>  -110.09019077 </eigenvalue_sum>
+  <eigenvalue_sum>  -121.30697238 </eigenvalue_sum>
+  <eigenvalue_sum>  -132.98872591 </eigenvalue_sum>
+  <eigenvalue_sum>  -144.99769946 </eigenvalue_sum>
+  <eigenvalue_sum>  -157.18447381 </eigenvalue_sum>
+  <eigenvalue_sum>  -158.69352448 </eigenvalue_sum>
+  <eigenvalue_sum>  -170.90572952 </eigenvalue_sum>
+  <eigenvalue_sum>  -183.92833758 </eigenvalue_sum>
+<eigenset>
+  <eigenvalues spin="0" kpoint="0.00000000 0.00000000 0.00000000" weight="1.00000000" n="64">
+  -175.43816  -174.25530  -173.52216  -170.19778  -155.40810
+  -154.40773  -152.15459  -148.77539  -147.24075  -139.68517
+  -138.16853  -135.58949  -131.47346  -130.32798  -129.01718
+  -128.24051  -127.38177  -125.51218  -124.85743  -122.57931
+  -120.89175  -118.86568  -117.17147  -115.37663  -112.15576
+  -110.31045  -103.68659  -101.36857   -99.76211   -96.43650
+   -94.81149   -91.64248   -84.80666   -83.47222   -81.80394
+   -76.60021   -74.84301   -72.06416   -67.17190   -65.68361
+   -61.20391   -60.55695   -58.68551   -57.07565   -52.54429
+   -51.11027   -48.04568   -44.92997   -43.31248   -39.72854
+   -36.81856   -34.43389   -31.53197   -30.40624   -28.24759
+   -26.93370   -24.64060   -22.13920   -20.86332   -17.12670
+   -16.13390   -13.62999   -12.06784    10.77865
+  </eigenvalues>
+</eigenset>
+  <etotal_int>    -182.79578917 </etotal_int>
+  BOSampleStepper: end scf iteration
+  BOSampleStepper: start scf iteration
+  <electronic_charge ispin="0"> 122.00000000 </electronic_charge>
+  <eigenvalue_sum>  -169.93980299 </eigenvalue_sum>
+  <eigenvalue_sum>  -176.97324327 </eigenvalue_sum>
+  <eigenvalue_sum>  -196.63447293 </eigenvalue_sum>
+  <eigenvalue_sum>  -221.48378391 </eigenvalue_sum>
+  <eigenvalue_sum>  -238.16629921 </eigenvalue_sum>
+  <eigenvalue_sum>  -246.65168787 </eigenvalue_sum>
+  <eigenvalue_sum>  -251.46675529 </eigenvalue_sum>
+  <eigenvalue_sum>  -255.14839240 </eigenvalue_sum>
+  <eigenvalue_sum>  -257.96815049 </eigenvalue_sum>
+  <eigenvalue_sum>  -260.01698234 </eigenvalue_sum>
+<eigenset>
+  <eigenvalues spin="0" kpoint="0.00000000 0.00000000 0.00000000" weight="1.00000000" n="64">
+  -165.18037  -142.11980  -141.46854  -141.22109  -138.79768
+  -132.70165  -132.35254  -132.19661  -131.83925  -131.58876
+  -129.97540  -129.36812  -124.56557  -124.15375  -123.83369
+  -122.58467  -119.06773  -118.36099  -118.07408  -117.77220
+  -117.49736  -116.97091  -116.78905  -116.40738  -115.75310
+  -115.39265  -114.92833  -114.75617  -114.40102  -113.97932
+  -113.51184  -112.63046  -111.44903  -111.13715  -109.62967
+  -109.44193  -107.44366  -106.68748  -105.47877  -104.30676
+  -101.86927  -101.21309  -100.39430   -99.65586   -98.86495
+   -97.87062   -97.20046   -96.25703   -95.97943   -95.18519
+   -95.13014   -93.79766   -93.47749   -93.14925   -92.72482
+   -92.50276   -91.67996   -90.73139   -90.38153   -88.94296
+   -88.12734   -87.06136   -83.83671   -81.78004
+  </eigenvalues>
+</eigenset>
+  <etotal_int>    -316.35230226 </etotal_int>
+  BOSampleStepper: end scf iteration
+  <ekin>       231.59537908 </ekin>
+  <econf>        0.00000000 </econf>
+  <eps>       -244.65916452 </eps>
+  <enl>        -14.18687345 </enl>
+  <ecoul>      -65.48819696 </ecoul>
+  <exc>        -69.02028831 </exc>
+  <esr>         26.85293666 </esr>
+  <eself>      141.49152878 </eself>
+  <ets>          0.00000000 </ets>
+  <eexf>         0.00000000 </eexf>
+  <etotal>    -161.75914416 </etotal>
+  <epv>          0.00000000 </epv>
+  <eefield>      0.00000000 </eefield>
+  <enthalpy>  -161.75914416 </enthalpy>
+<atomset>
+<unit_cell 
+    a=" 37.79452249   0.00000000   0.00000000"
+    b="  0.00000000  37.79452249   0.00000000"
+    c="  0.00000000   0.00000000  37.79452249" />
+  <atom name="PO01" species="carbon">
+    <position> 12.29529048 18.89709376 9.44866064 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 3.52280450 -0.12385860 0.05900544 </force>
+  </atom>
+  <atom name="PO02" species="carbon">
+    <position> 18.89752516 12.29534100 9.44858747 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.13600078 3.49797196 0.00962018 </force>
+  </atom>
+  <atom name="PO03" species="carbon">
+    <position> 25.49943061 18.89721812 9.44864783 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -3.51451208 0.06637404 -0.01455996 </force>
+  </atom>
+  <atom name="PO04" species="carbon">
+    <position> 18.89726060 25.49961908 9.44871385 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 0.04918221 -3.66509978 0.02846605 </force>
+  </atom>
+  <atom name="PO05" species="carbon">
+    <position> 16.44521135 24.15005541 9.44868692 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.71017740 -2.90328104 0.06192601 </force>
+  </atom>
+  <atom name="PO06" species="carbon">
+    <position> 13.64502470 21.34920439 9.44869561 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 2.82725003 0.64156551 0.03698739 </force>
+  </atom>
+  <atom name="PO07" species="carbon">
+    <position> 13.64467617 16.44523726 9.44865350 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 3.10703079 -0.81984359 0.02515603 </force>
+  </atom>
+  <atom name="PO08" species="carbon">
+    <position> 16.44503979 13.64491494 9.44860936 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.97328518 3.02214308 0.06690303 </force>
+  </atom>
+  <atom name="PO09" species="carbon">
+    <position> 21.34984100 24.15005250 9.44874884 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 0.65754417 -3.10571234 -0.06569340 </force>
+  </atom>
+  <atom name="PO10" species="carbon">
+    <position> 24.14922839 21.34970882 9.44867555 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -3.10741870 0.68062175 -0.05137133 </force>
+  </atom>
+  <atom name="PO11" species="carbon">
+    <position> 24.14965224 16.44514747 9.44868565 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -3.00235521 -0.54402492 -0.09676992 </force>
+  </atom>
+  <atom name="PO12" species="carbon">
+    <position> 21.34884946 13.64490296 9.44862049 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 0.20061276 2.92943125 0.04076919 </force>
+  </atom>
+  <atom name="PO13" species="carbon">
+    <position> 13.97363573 25.44732019 9.44864602 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 1.46931625 -3.93467715 0.03906221 </force>
+  </atom>
+  <atom name="PO14" species="carbon">
+    <position> 12.34718687 23.82082644 9.44867134 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 3.78299592 -1.51051833 0.10848372 </force>
+  </atom>
+  <atom name="PO15" species="carbon">
+    <position> 12.34738058 13.97372619 9.44858122 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 4.04141552 1.58559104 0.00565273 </force>
+  </atom>
+  <atom name="PO16" species="carbon">
+    <position> 13.97389149 12.34741591 9.44857287 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 1.63160239 3.99669496 0.05478139 </force>
+  </atom>
+  <atom name="PO17" species="carbon">
+    <position> 23.82087123 12.34705345 9.44862384 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -1.53924703 3.71110772 0.07517363 </force>
+  </atom>
+  <atom name="PO18" species="carbon">
+    <position> 25.44728226 13.97358998 9.44867851 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -3.80492660 1.67002096 -0.04955402 </force>
+  </atom>
+  <atom name="PO19" species="carbon">
+    <position> 23.82075329 25.44675133 9.44869667 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -1.69347047 -3.74318581 0.04433718 </force>
+  </atom>
+  <atom name="PO20" species="carbon">
+    <position> 25.44671024 23.82095046 9.44865410 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -3.71609892 -1.57547956 -0.04580045 </force>
+  </atom>
+  <atom name="PO21" species="nitrogen">
+    <position> 21.91212784 15.88212308 9.44867461 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 1.10644171 -1.10690045 -0.03095151 </force>
+  </atom>
+  <atom name="PO22" species="nitrogen">
+    <position> 15.88240685 15.88207473 9.44870014 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -1.68168630 -1.33070827 -0.14805536 </force>
+  </atom>
+  <atom name="PO23" species="nitrogen">
+    <position> 15.88198928 21.91191134 9.44870317 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -1.21154494 1.36908111 -0.12117340 </force>
+  </atom>
+  <atom name="PO24" species="nitrogen">
+    <position> 21.91290243 21.91226581 9.44875463 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 1.27520196 1.36491710 0.03467539 </force>
+  </atom>
+  <atom name="PO25" species="hydrogen">
+    <position> 13.90034867 27.14785040 9.44864285 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 0.11912821 0.14122180 -0.00385635 </force>
+  </atom>
+  <atom name="PO26" species="hydrogen">
+    <position> 10.64664050 23.89411440 9.44866354 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.12105803 -0.11021355 -0.01393307 </force>
+  </atom>
+  <atom name="PO27" species="hydrogen">
+    <position> 10.64661995 13.90036033 9.44856937 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.18012698 0.13885743 -0.00019281 </force>
+  </atom>
+  <atom name="PO28" species="hydrogen">
+    <position> 13.90040042 10.64665094 9.44858917 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 0.11446027 -0.11932687 0.02771824 </force>
+  </atom>
+  <atom name="PO29" species="hydrogen">
+    <position> 23.89413228 10.64659148 9.44858456 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.09090745 -0.36814193 0.00321654 </force>
+  </atom>
+  <atom name="PO30" species="hydrogen">
+    <position> 27.14793549 13.90031866 9.44867985 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 0.31043243 0.08139238 0.00867660 </force>
+  </atom>
+  <atom name="PO31" species="hydrogen">
+    <position> 23.89415521 27.14782819 9.44867899 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.11198003 0.25871841 -0.02929426 </force>
+  </atom>
+  <atom name="PO32" species="hydrogen">
+    <position> 27.14787675 23.89419917 9.44861845 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 0.17184711 -0.14315814 0.01346873 </force>
+  </atom>
+  <atom name="PO33" species="hydrogen">
+    <position> 10.72144214 18.89721265 9.44861945 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.02233638 -0.00937770 -0.00048771 </force>
+  </atom>
+  <atom name="PO34" species="hydrogen">
+    <position> 18.89729722 10.72149406 9.44861330 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.04900439 0.02703169 0.02577409 </force>
+  </atom>
+  <atom name="PO35" species="hydrogen">
+    <position> 27.07311876 18.89725329 9.44863150 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.01151799 -0.00946128 -0.01879784 </force>
+  </atom>
+  <atom name="PO36" species="hydrogen">
+    <position> 18.89728452 27.07309938 9.44870739 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.02650011 0.12012932 -0.03066335 </force>
+  </atom>
+  <atom name="PO37" species="magnesium">
+    <position> 18.89725989 18.89725989 9.44862994 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.03078973 -0.10850586 -0.04866424 </force>
+  </atom>
+</atomset>
+<unit_cell_a_norm> 37.794522 </unit_cell_a_norm>
+<unit_cell_b_norm> 37.794522 </unit_cell_b_norm>
+<unit_cell_c_norm> 37.794522 </unit_cell_c_norm>
+<unit_cell_alpha>  90.000 </unit_cell_alpha>
+<unit_cell_beta>   90.000 </unit_cell_beta>
+<unit_cell_gamma>  90.000 </unit_cell_gamma>
+<unit_cell_volume> 53986.676 </unit_cell_volume>
+<timing name="iteration"       min="553.530" max="553.583"/>
+</iteration>
+<timing name="charge"          min="7.894" max="7.946"/>
+<timing name="energy"          min="226.330" max="233.042"/>
+<timing name="ortho_align"     min="194.882" max="199.823"/>
+<timing name="psda_prec"       min="0.773" max="1.008"/>
+<timing name="psda_residual"   min="81.549" max="86.819"/>
+<timing name="psda_update_wf"  min="2.880" max="7.432"/>
+<timing name="update_vhxc"     min="10.982" max="12.597"/>
+<timing name="wf_update"       min="287.699" max="293.261"/>
+<timing name="wfdiag"          min="9.088" max="9.539"/>
+<timing name="ekin"            min="4.120" max="10.950"/>
+<timing name="exc"             min="9.216" max="10.848"/>
+<timing name="hpsi"            min="9.767" max="10.237"/>
+<timing name="nonlocal"        min="211.499" max="211.525"/>
+<timing name="charge_compute"  min="4.236" max="6.445"/>
+<timing name="charge_integral" min="0.283" max="0.305"/>
+<timing name="charge_rowsum"   min="0.845" max="3.044"/>
+<timing name="charge_vft"      min="0.320" max="0.352"/>
+ EnergyFunctional: <np0v> 180 </np0v>  <np1v> 180 </np1v>  <np2v> 180 </np2v>
+ EnergyFunctional: vft->np012(): 5832000
+RTTDCmd TEST1
+<wavefunction ecut="25.000" nspin="1" nel="122" nempty="3">
+<cell a="37.794522 0.000000 0.000000"
+      b="0.000000 37.794522 0.000000"
+      c="0.000000 0.000000 37.794522"/>
+ reciprocal lattice vectors
+ 0.166246 0.000000 0.000000
+ 0.000000 0.166246 0.000000
+ 0.000000 0.000000 0.166246
+<refcell a="0.000000 0.000000 0.000000"
+         b="0.000000 0.000000 0.000000"
+         c="0.000000 0.000000 0.000000"/>
+<grid nx="88" ny="88" nz="88"/>
+<slater_determinant kpoint="0 0 0" size="64">
+ sdcontext: 1x8
+ basis size: 322453
+ c dimensions: 322453x64   (322453x8 blocks)
+ <density_matrix form="diagonal" size="64"/>
+</slater_determinant>
+</wavefunction>
+RTSampleStepper : step START
+RTSampleStepper : RTPosition Preparing START
+RTPosition DENST GRID : 180  180  180
+RTPosition SOFT GRID : 88  88  88
+RTSampleStepper : RTPosition Preparing END
+<rt-iteration count="0">
+  <electronic_charge ispin="0"> 122.00000000 </electronic_charge>
+  <ekin>       231.59537908 </ekin>
+  <econf>        0.00000000 </econf>
+  <eps>       -244.65916452 </eps>
+  <enl>        -14.18687345 </enl>
+  <ecoul>      -65.48819696 </ecoul>
+  <exc>        -69.02028831 </exc>
+  <esr>         26.85293666 </esr>
+  <eself>      141.49152878 </eself>
+  <ets>          0.00000000 </ets>
+  <eexf>         0.00000000 </eexf>
+  <etotal>    -161.75914416 </etotal>
+  <epv>          0.00000000 </epv>
+  <eefield>      0.00000000 </eefield>
+  <enthalpy>  -161.75914416 </enthalpy>
+<atomset>
+<unit_cell 
+    a=" 37.79452249   0.00000000   0.00000000"
+    b="  0.00000000  37.79452249   0.00000000"
+    c="  0.00000000   0.00000000  37.79452249" />
+  <atom name="PO01" species="carbon">
+    <position> 12.29529048 18.89709376 9.44866064 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 3.52280450 -0.12385860 0.05900544 </force>
+  </atom>
+  <atom name="PO02" species="carbon">
+    <position> 18.89752516 12.29534100 9.44858747 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.13600078 3.49797196 0.00962018 </force>
+  </atom>
+  <atom name="PO03" species="carbon">
+    <position> 25.49943061 18.89721812 9.44864783 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -3.51451208 0.06637404 -0.01455996 </force>
+  </atom>
+  <atom name="PO04" species="carbon">
+    <position> 18.89726060 25.49961908 9.44871385 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 0.04918221 -3.66509978 0.02846605 </force>
+  </atom>
+  <atom name="PO05" species="carbon">
+    <position> 16.44521135 24.15005541 9.44868692 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.71017740 -2.90328104 0.06192601 </force>
+  </atom>
+  <atom name="PO06" species="carbon">
+    <position> 13.64502470 21.34920439 9.44869561 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 2.82725003 0.64156551 0.03698739 </force>
+  </atom>
+  <atom name="PO07" species="carbon">
+    <position> 13.64467617 16.44523726 9.44865350 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 3.10703079 -0.81984359 0.02515603 </force>
+  </atom>
+  <atom name="PO08" species="carbon">
+    <position> 16.44503979 13.64491494 9.44860936 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.97328518 3.02214308 0.06690303 </force>
+  </atom>
+  <atom name="PO09" species="carbon">
+    <position> 21.34984100 24.15005250 9.44874884 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 0.65754417 -3.10571234 -0.06569340 </force>
+  </atom>
+  <atom name="PO10" species="carbon">
+    <position> 24.14922839 21.34970882 9.44867555 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -3.10741870 0.68062175 -0.05137133 </force>
+  </atom>
+  <atom name="PO11" species="carbon">
+    <position> 24.14965224 16.44514747 9.44868565 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -3.00235521 -0.54402492 -0.09676992 </force>
+  </atom>
+  <atom name="PO12" species="carbon">
+    <position> 21.34884946 13.64490296 9.44862049 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 0.20061276 2.92943125 0.04076919 </force>
+  </atom>
+  <atom name="PO13" species="carbon">
+    <position> 13.97363573 25.44732019 9.44864602 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 1.46931625 -3.93467715 0.03906221 </force>
+  </atom>
+  <atom name="PO14" species="carbon">
+    <position> 12.34718687 23.82082644 9.44867134 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 3.78299592 -1.51051833 0.10848372 </force>
+  </atom>
+  <atom name="PO15" species="carbon">
+    <position> 12.34738058 13.97372619 9.44858122 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 4.04141552 1.58559104 0.00565273 </force>
+  </atom>
+  <atom name="PO16" species="carbon">
+    <position> 13.97389149 12.34741591 9.44857287 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 1.63160239 3.99669496 0.05478139 </force>
+  </atom>
+  <atom name="PO17" species="carbon">
+    <position> 23.82087123 12.34705345 9.44862384 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -1.53924703 3.71110772 0.07517363 </force>
+  </atom>
+  <atom name="PO18" species="carbon">
+    <position> 25.44728226 13.97358998 9.44867851 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -3.80492660 1.67002096 -0.04955402 </force>
+  </atom>
+  <atom name="PO19" species="carbon">
+    <position> 23.82075329 25.44675133 9.44869667 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -1.69347047 -3.74318581 0.04433718 </force>
+  </atom>
+  <atom name="PO20" species="carbon">
+    <position> 25.44671024 23.82095046 9.44865410 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -3.71609892 -1.57547956 -0.04580045 </force>
+  </atom>
+  <atom name="PO21" species="nitrogen">
+    <position> 21.91212784 15.88212308 9.44867461 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 1.10644171 -1.10690045 -0.03095151 </force>
+  </atom>
+  <atom name="PO22" species="nitrogen">
+    <position> 15.88240685 15.88207473 9.44870014 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -1.68168630 -1.33070827 -0.14805536 </force>
+  </atom>
+  <atom name="PO23" species="nitrogen">
+    <position> 15.88198928 21.91191134 9.44870317 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -1.21154494 1.36908111 -0.12117340 </force>
+  </atom>
+  <atom name="PO24" species="nitrogen">
+    <position> 21.91290243 21.91226581 9.44875463 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 1.27520196 1.36491710 0.03467539 </force>
+  </atom>
+  <atom name="PO25" species="hydrogen">
+    <position> 13.90034867 27.14785040 9.44864285 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 0.11912821 0.14122180 -0.00385635 </force>
+  </atom>
+  <atom name="PO26" species="hydrogen">
+    <position> 10.64664050 23.89411440 9.44866354 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.12105803 -0.11021355 -0.01393307 </force>
+  </atom>
+  <atom name="PO27" species="hydrogen">
+    <position> 10.64661995 13.90036033 9.44856937 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.18012698 0.13885743 -0.00019281 </force>
+  </atom>
+  <atom name="PO28" species="hydrogen">
+    <position> 13.90040042 10.64665094 9.44858917 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 0.11446027 -0.11932687 0.02771824 </force>
+  </atom>
+  <atom name="PO29" species="hydrogen">
+    <position> 23.89413228 10.64659148 9.44858456 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.09090745 -0.36814193 0.00321654 </force>
+  </atom>
+  <atom name="PO30" species="hydrogen">
+    <position> 27.14793549 13.90031866 9.44867985 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 0.31043243 0.08139238 0.00867660 </force>
+  </atom>
+  <atom name="PO31" species="hydrogen">
+    <position> 23.89415521 27.14782819 9.44867899 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.11198003 0.25871841 -0.02929426 </force>
+  </atom>
+  <atom name="PO32" species="hydrogen">
+    <position> 27.14787675 23.89419917 9.44861845 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> 0.17184711 -0.14315814 0.01346873 </force>
+  </atom>
+  <atom name="PO33" species="hydrogen">
+    <position> 10.72144214 18.89721265 9.44861945 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.02233638 -0.00937770 -0.00048771 </force>
+  </atom>
+  <atom name="PO34" species="hydrogen">
+    <position> 18.89729722 10.72149406 9.44861330 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.04900439 0.02703169 0.02577409 </force>
+  </atom>
+  <atom name="PO35" species="hydrogen">
+    <position> 27.07311876 18.89725329 9.44863150 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.01151799 -0.00946128 -0.01879784 </force>
+  </atom>
+  <atom name="PO36" species="hydrogen">
+    <position> 18.89728452 27.07309938 9.44870739 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.02650011 0.12012932 -0.03066335 </force>
+  </atom>
+  <atom name="PO37" species="magnesium">
+    <position> 18.89725989 18.89725989 9.44862994 </position>
+    <velocity> 0.00000000 0.00000000 0.00000000 </velocity>
+    <force> -0.03078973 -0.10850586 -0.04866424 </force>
+  </atom>
+</atomset>
+<unit_cell_a_norm> 37.794522 </unit_cell_a_norm>
+<unit_cell_b_norm> 37.794522 </unit_cell_b_norm>
+<unit_cell_c_norm> 37.794522 </unit_cell_c_norm>
+<unit_cell_alpha>  90.000 </unit_cell_alpha>
+<unit_cell_beta>   90.000 </unit_cell_beta>
+<unit_cell_gamma>  90.000 </unit_cell_gamma>
+<unit_cell_volume> 53986.676 </unit_cell_volume>
+  <econst> -161.75914416 </econst>
+  <ekin_ion> 0.00000000 </ekin_ion>
+  <temp_ion> 0.00000000 </temp_ion>
+ RTSampleStpper : Start CN propagator 0
+ EnergyFunctional: <np0v> 180 </np0v>  <np1v> 180 </np1v>  <np2v> 180 </np2v>
+ EnergyFunctional: vft->np012(): 5832000
+<RTCNWavefunctionStepper : CN iteration START : 0.020000000000000000 : 5 : 10 />
+RTCN RHO TEST : 1.000000000000040190
+ RTCN : 0 | DRHO : 0.000742945461121268 | ITELE :0 | RHOR : 0.000000338155131823
+RTCN RHO TEST : 1.000000009313920968
+ RTCN : 1 | DRHO : 0.000000270860226831 | ITELE :0 | RHOR : 0.000000000000099715
+RTCN RHO TEST : 1.000000001205864741
+ RTCN : 2 | DRHO : 0.000000005600748305 | ITELE :0 | RHOR : 0.000000000000000005
+RTCN RHO TEST : 0.999999998423789282
+ RTCN : 3 | DRHO : 0.000000002474628199 | ITELE :0 | RHOR : 0.000000000000000000
+RTCN RHO TEST : 1.000000000027068570
+ RTCN : 4 | DRHO : 0.000000000099225203 | ITELE :0 | RHOR : 0.000000000000000000
+<RTCNWavefunctionStepper : CN iteration END : 5 : 10 />
+<timing name="exc"             min="10.384" max="11.454"/>
+<timing name="hpsi"            min="3.099" max="3.476"/>
+<timing name="charge_compute"  min="8.831" max="13.650"/>
+<timing name="charge_integral" min="0.495" max="0.548"/>
+<timing name="charge_rowsum"   min="1.992" max="7.044"/>
+<timing name="charge_vft"      min="0.709" max="0.729"/>
+<timing name="charge_compute"  min="4.404" max="6.495"/>
+<timing name="charge_integral" min="0.290" max="0.319"/>
+<timing name="charge_rowsum"   min="0.812" max="2.889"/>
+<timing name="charge_vft"      min="0.317" max="0.328"/>
+<timing name="charge_compute"  min="0.618" max="1.255"/>
+<timing name="charge_integral" min="0.045" max="0.050"/>
+<timing name="charge_rowsum"   min="0.160" max="0.842"/>
+<timing name="charge_vft"      min="0.062" max="0.066"/>
+ RTSampleStpper : End CN propagator 
+  <rt_eigenvalue_sum>  69.23979207 </rt_eigenvalue_sum>
+<rt_eigenset>
+  <rt_eigenvalues spin="0" kpoint="0.00000000 0.00000000 0.00000000" weight="1.00000000" n="64">
+   -43.74690   -15.63260   -11.74434   -11.24981   -10.47553
+   -10.42071    -8.67944    -7.05531    -4.06307    -2.62814
+     0.07129     0.30659     4.69423     6.11036     7.82167
+     9.16928    11.66514    13.00261    14.34950    15.28095
+    16.95267    17.37441    18.46750    19.31582    20.71149
+    21.59691    22.35282    23.40490    24.67566    25.78727
+    26.44470    28.04844    29.60654    31.72609    33.12758
+    34.41989    35.92786    37.35947    39.49800    39.90099
+    42.28813    43.06560    44.24980    45.64245    47.22992
+    48.28828    49.85505    50.89301    52.40039    54.33064
+    54.72903    56.62994    57.93340    58.69554    61.68945
+    62.43866    64.15522    65.04231    66.07125    67.04395
+    70.10377    71.10699    72.11753    74.65047
+  </rt_eigenvalues>
+</rt_eigenset>
+rt_w_eigenvalue_sum = 122.46619395   
+rt_ef.dxc()         = 20.67414889    
+rt_ef.ehart()       = 49.08882880    
+rt_ef.ehart_e()     = 850.32869951   
+rt_ef.ehart_ep()    = -1452.49880519 
+rt_ef.esr()         = 26.85293666    
+  <rt_etotal_int>  0.00000000 as -170.568014322436738 </rt_etotal_int>
+<timing name="rt-iteration"    min="184.939" max="185.071"/>
+</rt-iteration>
+RTTDCmd TEST2
+<timing name="charge"          min="21.983" max="22.368"/>
+<timing name="energy"          min="11.572" max="11.683"/>
+<timing name="rt_cg"           min="109.753" max="115.593"/>
+<timing name="rt_cn"           min="155.484" max="155.571"/>
+<timing name="rt_cn_conv"      min="0.494" max="0.612"/>
+<timing name="update_vhxc"     min="16.628" max="18.118"/>
+<timing name="ekin"            min="0.122" max="0.263"/>
+<timing name="exc"             min="3.927" max="4.064"/>
+<timing name="hpsi"            min="0.160" max="0.182"/>
+<timing name="nonlocal"        min="10.618" max="10.631"/>
+<timing name="charge_compute"  min="1.373" max="2.182"/>
+<timing name="charge_integral" min="0.090" max="0.098"/>
+<timing name="charge_rowsum"   min="0.302" max="1.059"/>
+<timing name="charge_vft"      min="0.127" max="0.135"/>
+RTTDCmd TEST3
+[qbox] <cmd>#save gs.xml</cmd>
+[qbox]  End of command stream 
+<real_time> 758.776 </real_time>
+<end_time> 2025-02-14T03:30:24Z </end_time>
+</fpmd:simulation>

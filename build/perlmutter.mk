@@ -13,14 +13,20 @@
  CXX=CC
  LD=$(CXX)
 
- XERCES=/global/cfs/cdirs/m2956/adrianpd/xerces-perl
+ #XERCES=/global/cfs/cdirs/m2956/adrianpd/xerces-perl
+ XERCES=/global/homes/s/sliu424/xerces-3.2.4
 
  OPT= -O3  -gopt -traceback  
 
- PLTFLAGS += $(OPT)  \
+ #PLTFLAGS += $(OPT)  \
              -DUSE_MPI -DSCALAPACK -DADD_ \
              -DAPP_NO_THREADS -DXML_USE_NO_THREADS -DUSE_XERCES \
              -DMPICH_IGNORE_CXX_SEEK -DPARALLEL_FS -DUSE_FFTW3
+ PLTFLAGS += $(OPT)  \
+            -DUSE_MPI -DSCALAPACK -DADD_ \
+            -DAPP_NO_THREADS -DXML_USE_NO_THREADS -DUSE_XERCES \
+            -DMPICH_IGNORE_CXX_SEEK -DPARALLEL_FS \
+            -DOPTIMIZE_GPU
 
  INCLUDE = -I$(XERCES)/include
 
@@ -28,6 +34,6 @@
 
  LIBPATH = -L$(XERCES)/lib -L$(DFTUNING)/lib
 
- LIBS =  -lfftw3_threads -lfftw3_omp -lfftw3 -lxerces-c 
+ LIBS = -lfftw3_threads -lfftw3_omp -lfftw3 -lxerces-c
 
  LDFLAGS = $(LIBPATH) $(LIBS) -fopenmp

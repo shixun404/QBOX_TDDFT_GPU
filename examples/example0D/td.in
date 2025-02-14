@@ -1,0 +1,84 @@
+# H2 ground state
+species carbon    C_ONCV_PBE-1.2.xml
+species nitrogen  N_ONCV_PBE-1.2.xml
+species hydrogen  H_ONCV_PBE-1.2.xml
+species magnesium Mg_ONCV_PBE-1.2.xml
+atom PO01 carbon        12.295290480     18.897093760      9.448660640
+atom PO02 carbon        18.897525160     12.295341000      9.448587470
+atom PO03 carbon        25.499430610     18.897218120      9.448647830
+atom PO04 carbon        18.897260600     25.499619080      9.448713850
+atom PO05 carbon        16.445211350     24.150055410      9.448686920
+atom PO06 carbon        13.645024700     21.349204390      9.448695610
+atom PO07 carbon        13.644676170     16.445237260      9.448653500
+atom PO08 carbon        16.445039790     13.644914940      9.448609360
+atom PO09 carbon        21.349841000     24.150052500      9.448748840
+atom PO10 carbon        24.149228390     21.349708820      9.448675550
+atom PO11 carbon        24.149652240     16.445147470      9.448685650
+atom PO12 carbon        21.348849460     13.644902960      9.448620490
+atom PO13 carbon        13.973635730     25.447320190      9.448646020
+atom PO14 carbon        12.347186870     23.820826440      9.448671340
+atom PO15 carbon        12.347380580     13.973726190      9.448581220
+atom PO16 carbon        13.973891490     12.347415910      9.448572870
+atom PO17 carbon        23.820871230     12.347053450      9.448623840
+atom PO18 carbon        25.447282260     13.973589980      9.448678510
+atom PO19 carbon        23.820753290     25.446751330      9.448696670
+atom PO20 carbon        25.446710240     23.820950460      9.448654100
+atom PO21 nitrogen      21.912127840     15.882123080      9.448674610
+atom PO22 nitrogen      15.882406850     15.882074730      9.448700140
+atom PO23 nitrogen      15.881989280     21.911911340      9.448703170
+atom PO24 nitrogen      21.912902430     21.912265810      9.448754630
+atom PO25 hydrogen      13.900348670     27.147850400      9.448642850
+atom PO26 hydrogen      10.646640500     23.894114400      9.448663540
+atom PO27 hydrogen      10.646619950     13.900360330      9.448569370
+atom PO28 hydrogen      13.900400420     10.646650940      9.448589170
+atom PO29 hydrogen      23.894132280     10.646591480      9.448584560
+atom PO30 hydrogen      27.147935490     13.900318660      9.448679850
+atom PO31 hydrogen      23.894155210     27.147828190      9.448678990
+atom PO32 hydrogen      27.147876750     23.894199170      9.448618450
+atom PO33 hydrogen      10.721442140     18.897212650      9.448619450
+atom PO34 hydrogen      18.897297220     10.721494060      9.448613300
+atom PO35 hydrogen      27.073118760     18.897253290      9.448631500
+atom PO36 hydrogen      18.897284520     27.073099380      9.448707390
+atom PO37 magnesium     18.897259890     18.897259890      9.448629940
+constraint define position center PO37
+set cell           37.794522492515401767318347296384     0.00000000000000     0.00000000000000        0.00000000000000     37.794522492515401767318347296384      0.00000000000000       0.00000000000000     0.00000000000000     37.794522492515401767318347296384
+set ecut 50
+set ecutprec 40
+#kpoint delete 0 0 0
+# X point
+#kpoint add  0.5  0.5  0.5   1.000
+#set cell_dyn CG
+#set atoms_dyn CG
+set wf_diag T
+set wf_dyn PSDA
+set xc PBE
+#set nspin 1
+set scf_tol 1.e-8
+#set charge_mix_coeff 0.0
+#set charge_mix_rcut 0.0
+set atoms_dyn CG
+randomize_wf
+set nempty 3
+#set atoms_dyn CG
+#load gs.xml
+#run -atomic_density 100 300 100
+#save gs.xml
+#load gs.xml
+set rt_propagator CN
+#set rt_md OFF
+set rt_dt 0.02
+set rt_scf_tol 1.0e-15
+set rt_rho_tol 1.0e-15
+#set rt_vp ON
+#set rt_vp_ind F
+#set rt_vp_eq DELTA
+#set rt_vp_amp 0.0001 0.00 0.00
+###set rt_vp_freq 0.001
+#set rt_vp_sigma
+#set rt_vp_gauss
+#set rt_vp_length
+#set rt_vp_delay
+#set rt_delta_kick ON
+#set rt_delta_kick_amp 0.0 0.0 0.001
+rttd 2 -auto-save 2 5 10
+#save gs.xml

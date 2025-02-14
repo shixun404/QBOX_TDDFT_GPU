@@ -1,0 +1,10 @@
+
+Lmod is automatically replacing "gcc-native/12.3" with "nvidia/24.5".
+
+
+Lmod is automatically replacing "PrgEnv-gnu/8.5.0" with "PrgEnv-nvidia/8.5.0".
+
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) cray-libsci/23.12.5     2) cray-mpich/8.1.28
+
