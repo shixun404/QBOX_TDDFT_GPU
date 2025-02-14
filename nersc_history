@@ -1,0 +1,831 @@
+    1  ls
+    2  git clone git@github.com:vineeth22/QBOX_RTTDDFT.git
+    3  ssh-keygen -t rsa -b 4096 -C "Perlmutter SSH Key"
+    4  cat ~/.ssh/id_rsa.pub
+    5  ssh -T git@github.com
+    6  git clone git@github.com:vineeth22/QBOX_RTTDDFT.git
+    7  ls
+    8  cd QBOX_RTTDDFT/
+    9  git checkout single_checkpoint
+   10  ls
+   11  module load mpi
+   12  module load some_qbox_dependencies  # 替换为实际依赖项
+   13  make
+   14  ls
+   15  cd src/
+   16  ls
+   17  make
+   18  make TARGET=perlmutter
+   19  ls -ld /global/cfs/cdirs/m2956/adrianpd/xerces-perl
+   20  ls
+   21  cd QBOX_RTTDDFT/
+   22  ls
+   23  cd src/
+   24  make
+   25  make TARGET=perlmutter
+   26  make TARGET=macosx_openmpi
+   27  make TARGET=build/macosx_openmpi
+   28  ls -l build/macosx_openmpi.mk
+   29  cd src/
+   30  make TARGET=perlmutter
+   31  cd src/
+   32  make TARGET=perlmutter
+   33  git checkout single_checkpoint
+   34  cd src/
+   35  make TARGET=perlmutter
+   36  module avail xerces
+   37  git branch -a
+   38  git checkout single_checkpoint
+   39  module avail
+   40  module swap PrgEnv-gnu PrgEnv-nvhpc
+   41  module load cray-fftw cray-libsci
+   42  module list
+   43  make TARGET=perlmutter
+   44  ls
+   45  cd src
+   46  make TARGET=perlmutter
+   47  ls -l qb
+   48  file qb
+   49  ./qb --help
+   50  cd ..
+   51  sbatch example_RTTDDFT/example0D/Batch.sh
+   52  squeue -j 34707043
+   53  squeue -j 34707043
+   54  squeue --start -j 34707043
+   55  squeue -j 34707043
+   56  module swap PrgEnv-gnu PrgEnv-nvhpc
+   57  module load cray-fftw cray-libsci
+   58  ls -l td.in
+   59  cd example_RTTDDFT/example0D/
+   60  ls -l td.in
+   61  sbatch Batch.sh
+   62  squeue -j 34754713
+   63  squeue -j 34754713
+   64  cd example_RTTDDFT/example0D
+   65  squeue -j 34754713
+   66  cd example_RTTDDFT/example0D
+   67  sbatch Batch.sh
+   68  squeue -j 34779593
+   69  squeue -j 34779593
+   70  sbatch example_RTTDDFT/example0D/Batch.sh
+   71  squeue -j 34805833
+   72  git checkout
+   73  ls -l /global/cfs/cdirs/m2956/adrianpd/Lastest_dev/src/qb
+   74  ls -ld /global/cfs/cdirs/m2956/adrianpd/Lastest_dev/src
+   75  groups
+   76  chmod g+x /global/cfs/cdirs/m2956/adrianpd/Lastest_dev/src
+   77  chmod g+rx /global/cfs/cdirs/m2956/adrianpd/Lastest_dev/src
+   78  sbatch example_RTTDDFT/example0D/Batch.sh
+   79  squeue -j 34829442
+   80  squeue -j 34829442
+   81  squeue -j 34805833
+   82  squeue -j 34829442
+   83  sbatch example_RTTDDFT/example0D/Batch.sh
+   84  squeue -j 34779593
+   85  squeue -j 34857028
+   86  squeue -j 34857028
+   87  cd example_RTTDDFT/example0D/
+   88  sbatch Batch.sh
+   89  squeue -j 34857028
+   90  squeue -j 34863885
+   91  cd example_RTTDDFT/example0D/
+   92  sbatch Batch.sh
+   93  df -h | grep /global
+   94  ls /global/cfs/
+   95  ls /global/cfs/cdirs/
+   96  ls /global/cfs/cdirs/m2956/
+   97  ls /global/cfs/cdirs/m2956/adrianpd/
+   98  ls -ld /global/cfs/cdirs/m2956/adrianpd/
+   99  groups
+  100  module swap PrgEnv-gnu PrgEnv-nvhpc
+  101  module load cray-fftw cray-libsci
+  102  ls /global/cfs/cdirs/m2956/adrianpd/
+  103  ls /global/cfs/cdirs/m2956/
+  104  squeue -j 34882336
+  105  ls -l /global/u1/s/sliu424/QBOX_RTTDDFT/*.xml
+  106  ls /global/homes/s/sliu424/QBOX_RTTDDFT/src/qb
+  107  ls /global/cfs/cdirs/m2956/adrianpd/xerces-perl
+  108  module swap PrgEnv-gnu PrgEnv-nvhpc
+  109  module load cray-fftw cray-libsci
+  110  cd src
+  111  make TARGET=../build/perlmutter -j 16
+  112  make clean
+  113  cd ..
+  114  git reset --hard
+  115  make clean
+  116  rm -rf QBOX_RTTDDFT
+  117  cd ..
+  118  rm -rf QBOX_RTTDDFT
+  119  git@github.com:vineeth22/QBOX_RTTDDFT.git
+  120  ls
+  121  git clone git@github.com:vineeth22/QBOX_RTTDDFT.git
+  122  ls
+  123  cd QBOX_RTTDDFT/
+  124  ls
+  125  cd QBOX_RTTDDFT/
+  126  git checkout single_checkpoint
+  127  wget https://dlcdn.apache.org//xerces/c/3/sources/xerces-c-3.2.4.zip
+  128  wget https://archive.apache.org/dist/xerces/c/3/sources/xerces-c-3.2.4.tar.gz
+  129  tar -xzf xerces-c-3.2.4.tar.gz
+  130  cd xerces-c-3.2.4
+  131  mkdir build
+  132  cd build
+  133  ../configure --disable-static CC=cc CXX=g++ CFLAGS=-O3 CXXFLAGS=-O3 --prefix=$HOME/xerces-3.2.4
+  134  which XercesTest
+  135  ls $HOME/xerces-3.2.4/bin
+  136  cd ..
+  137  ls $HOME/xerces-3.2.4/bin
+  138  cd ..
+  139  ls $HOME/xerces-3.2.4/bin
+  140  ls $HOME/xerces-3.2.4
+  141  echo $HOME
+  142  cd ..
+  143  ls
+  144  ls /global/homes/s/sliu424/xerces-3.2.4
+  145  cd ~/QBOX_RTTDDFT/xerces-c-3.2.4/build
+  146  make clean
+  147  ../configure --disable-static CC=cc CXX=g++ CFLAGS=-O3 CXXFLAGS=-O3 --prefix=/global/homes/s/sliu424/xerces-3.2.4
+  148  make -j8
+  149  make install
+  150  ls $HOME/xerces-3.2.4
+  151  ldd $HOME/xerces-3.2.4/bin/XercesTest
+  152  cd $HOME/xerces-3.2.4
+  153  ls
+  154  cd bin
+  155  ls
+  156  cd ..
+  157  ls
+  158  cd QBOX_RTTDDFT/
+  159  cd xerces-c-3.2.4/build/
+  160  echo 'export PATH=$HOME/xerces-3.2.4/bin:$PATH' >> ~/.bashrc
+  161  echo 'export LD_LIBRARY_PATH=$HOME/xerces-3.2.4/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
+  162  source ~/.bashrc
+  163  git checkout
+  164  cd ..
+  165  ls
+  166  cd xerces-3.2.4/
+  167  pwd
+  168  cd ..
+  169  cd QBOX_RTTDDFT/
+  170  cd src/
+  171  make TARGET=../build/perlmutter -j 16
+  172  cd ..
+  173  cd build/
+  174  module swap PrgEnv-gnu PrgEnv-nvidia
+  175  module load cray-fftw cray-libsci
+  176  cd ..
+  177  cd src/
+  178  make TARGET=../build/perlmutter -j 16
+  179  module swap PrgEnv-gnu PrgEnv-nvidia
+  180  module load PrgEnv-gnu
+  181  module swap PrgEnv-gnu PrgEnv-nvidia
+  182  module load cray-fftw cray-libsci
+  183  make TARGET=../build/perlmutter -j 16
+  184  module swap PrgEnv-gnu PrgEnv-nvhpc
+  185  module load PrgEnv-gnu
+  186  module swap PrgEnv-gnu PrgEnv-nvhpc
+  187  module load cray-fftw cray-libsci
+  188  make TARGET=../build/perlmutter -j 16
+  189  cd ..
+  190  cd example_RTTDDFT/example0D/
+  191  sbatch Batch.sh
+  192  cd example_RTTDDFT/example0D/
+  193  sbatch Batch.sh
+  194  squeue -j 34945434
+  195  squeue -j 34945434
+  196  squeue -j 34945434
+  197  cd ..
+  198  ls
+  199  cd xerces-3.2.4/
+  200  ls
+  201  cd ..
+  202  cd QBOX_RTTDDFT/
+  203  cd example_RTTDDFT/example0D/
+  204  sbatch Batch.sh
+  205  squeue -j 34952951
+  206  squeue -j 34952951
+  207  squeue -j 34952951
+  208  git checkout
+  209  cd ..
+  210  ls
+  211  cd xerces-3.2.4/
+  212  ls
+  213  pwd
+  214  cd ..
+  215  ls
+  216  pwd
+  217  cd ..
+  218  ls /pscratch
+  219  cd /pscratch/sd
+  220  ls
+  221  mkdir -p /pscratch/sd/v/sliu424/sgl_checkpoint
+  222  ls v
+  223  ls s
+  224  cd s
+  225  cd sliu424
+  226  ls
+  227  mkdir -p /pscratch/sd/s/sliu424/sgl_checkpoint
+  228  ls
+  229  cd ..
+  230  ls
+  231  cd global/
+  232  ls
+  233  cd homes
+  234  ls
+  235  cd s/sliu424/
+  236  ls
+  237  cd QBOX_RTTDDFT/
+  238  cd src/
+  239  make clean
+  240  make TARGET=../build/perlmutter -j 16
+  241  module swap PrgEnv-gnu PrgEnv-nvhpc
+  242  module load cray-fftw cray-libsci
+  243  cd ..
+  244  module swap PrgEnv-gnu PrgEnv-nvhpc
+  245  module load PrgEnv-gnu
+  246  module swap PrgEnv-gnu PrgEnv-nvhpc
+  247  module load cray-fftw cray-libsci
+  248  cd src/
+  249  make TARGET=../build/perlmutter -j 16
+  250  cd ..
+  251  cd example_RTTDDFT/example0D/
+  252  sbatch Batch.sh
+  253  squeue -j 34994842
+  254  cd cc
+  255  cd ..
+  256  ls
+  257  cd ..
+  258  ls
+  259  cd ..
+  260  ls
+  261  cd pscratch/sd/s/sliu424/sgl_checkpoint/
+  262  ls
+  263  less checkpoint_rt_prev
+  264  lfs getstripe /pscratch/sd/s/sliu424/sgl_checkpoint/checkpoint_rt_prev
+  265  module swap PrgEnv-gnu PrgEnv-nvhpc
+  266  module load cray-fftw cray-libsci
+  267  cd src/
+  268  module swap PrgEnv-gnu PrgEnv-nvhpc
+  269  module load PrgEnv-gnu
+  270  module swap PrgEnv-gnu PrgEnv-nvhpc
+  271  module load cray-fftw cray-libsci
+  272  make TARGET=../build/perlmutter -j 16
+  273  cd ..
+  274  cd example_RTTDDFT/example0D
+  275  sbatch Batch.sh
+  276  squeue -j 35218717
+  277  module swap PrgEnv-gnu PrgEnv-nvhpc
+  278  lfs getstripe /pscratch/sd/s/sliu424/sgl_checkpoint/checkpoint_rt_prev
+  279  lfs getstripe /pscratch/sd/s/sliu424/sgl_checkpoint/checkpoint_rt
+  280  rm /pscratch/sd/s/sliu424/sgl_checkpoint/checkpoint_rt_prev
+  281  rm /pscratch/sd/s/sliu424/sgl_checkpoint/checkpoint_rt
+  282  cd src/
+  283  module load PrgEnv-nvhpc
+  284  module swap PrgEnv-gnu PrgEnv-nvhpc
+  285  module load PrgEnv-gnu
+  286  module swap PrgEnv-gnu PrgEnv-nvhp
+  287  module swap PrgEnv-gnu PrgEnv-nvhpc
+  288  module load cray-fftw cray-libsci
+  289  make TARGET=../build/perlmutter -j 16
+  290  cd ..
+  291  cd example_RTTDDFT/example0D
+  292  sbatch Batch.sh
+  293  squeue -j 35245236
+  294  squeue -j 35245236
+  295  lfs getstripe /pscratch/sd/s/sliu424/sgl_checkpoint/checkpoint_rt_prev
+  296  git checkout multi_checkpoint
+  297  squeue -j 35245236
+  298  mybalance
+  299  newbalance
+  300  allocations
+  301  cd .
+  302  cd ..
+  303  newbalance
+  304  allocations
+  305  scontrol show node m2956
+  306  myallocation
+  307  ls
+  308  ssh m2956
+  309  sbank balance -p m2956
+  310  # 使用 NERSC 的 iris 工具（需安装）
+  311  iris project-info m2956
+  312  iris project m2956
+  313  pwd
+  314  ls
+  315  cd ..
+  316  ls
+  317  cd sliu424
+  318  ls
+  319  cd QBOX_RTTDDFT/
+  320  pwd
+  321  which nvcc
+  322  cd ..
+  323  ls
+  324  mkdir my_QBOX_RTTDDFT
+  325  ls
+  326  cd my_QBOX_RTTDDFT/
+  327  git clone git@github.com:vineeth22/QBOX_RTTDDFT.git
+  328  ls
+  329  cd QBOX_RTTDDFT/
+  330  git clone https://github.com/shixun404/Fault-Tolerant-SGEMM-on-NVIDIA-GPUs.git
+  331  git checkout
+  332  module avail
+  333  gcc --version
+  334  cd Fault-Tolerant-SGEMM-on-NVIDIA-GPUs/
+  335  make -j4
+  336  echo $(dirname $(dirname $(which nvcc)))
+  337  make -j4
+  338  find /opt/nvidia/hpc_sdk/ -name helper_functions.h 2>/dev/null
+  339  make clean
+  340  make -j4
+  341  find . -name sgemm_test.cuh
+  342  find /opt/nvidia/hpc_sdk/ -name sgemm_test.cuh 2>/dev/null
+  343  cd Fault-Tolerant-SGEMM-on-NVIDIA-GPUs/
+  344  find . -name sgemm_test.cuh
+  345  find /opt/nvidia/hpc_sdk/ -name sgemm_test.cuh 2>/dev/null
+  346  make -j4
+  347  find /opt/nvidia/hpc_sdk/ -name "libcublas.so*" 2>/dev/null
+  348  make -j4
+  349  ./ft_sgemm 1024 6144 512 0 16
+  350  ./ft_sgemm 1024 6144 512 0 16 | tee output.txt
+  351  ps aux | grep ft_sgemm
+  352  grep -r "GFLOPS" .
+  353  ./ft_sgemm 1024 6144 512 0 16
+  354  gdb --args ./ft_sgemm 1024 6144 512 0 16
+  355  cuda-memcheck ./ft_sgemm 1024 6144 512 0 16
+  356  which cuda-memcheck
+  357  gdb --args ./ft_sgemm 1024 6144 512 0 16
+  358  which gcc
+  359  gcc version
+  360  gcc --version
+  361  cmake --version
+  362  nvcc --version
+  363  ./ft_sgemm 1024 6144 512 0 16
+  364  cd Fault-Tolerant-SGEMM-on-NVIDIA-GPUs/
+  365  ./ft_sgemm 1024 6144 512 0 16
+  366  cd ..
+  367  git clone https://github.com/ics2023/artifact.git
+  368  cd artifact/
+  369  make -j4
+  370  ./ft_sgemm 1024 6144 512 0 16
+  371  git clone https://github.com/shixun404/TurboFFT.git
+  372  cd ..
+  373  git clone https://github.com/shixun404/TurboFFT.git
+  374  cd TurboFFT/
+  375  mkdir build
+  376  ./compile.sh
+  377  python --version
+  378  module avail python
+  379  module load python/3.9
+  380  python --version
+  381  PyTorch --version
+  382  pyTorch --version
+  383  module spider pytorch
+  384  module load pytorch/2.3.1
+  385  module spider numpy
+  386  python -c "import numpy; print(numpy.__version__)"
+  387  python -c "import matplotlib; print(matplotlib.__version__)"
+  388  python -c "import seaborn; print(seaborn.__version__)"
+  389  pip install --user seaborn>=0.13.2
+  390  python -c "import seaborn; print(seaborn.__version__)"
+  391  ./compile.sh
+  392  ls /opt/nvidia/hpc_sdk/Linux_x86_64/23.9/cuda/12.2/samples/common/inc
+  393  ls /opt/nvidia/hpc_sdk/Linux_x86_64/23.9/cuda/12.2/samples/
+  394  ls /opt/nvidia/hpc_sdk/Linux_x86_64/23.9/cuda/12.2
+  395  nvidia-smi
+  396  lspci | grep NVIDIA
+  397  find /opt -name "samples" -type d 2>/dev/null | grep -i cuda
+  398  nvcc --version
+  399  find /global/common -name "samples" -type d 2>/dev/null | grep -i cuda
+  400  cd T
+  401  cd TurboFFT/
+  402  python --version
+  403  module load python/3.9
+  404  module spider pytorch
+  405  module load pytorch/2.3.1
+  406  pip install --user seaborn>=0.13.2
+  407  module avail cuda
+  408  module unload cudatoolkit/12.2
+  409  nvcc --version
+  410  module load cudatoolkit/12.0
+  411  nvcc --version
+  412  module load pytorch/2.3.1
+  413  module unload pytorch cudatoolkit
+  414  module unload cudatoolkit/12.2
+  415  module unload cudatoolkit/12.0
+  416  nvcc --version
+  417  module load cudatoolkit/12.0
+  418  nvcc --version
+  419  module spider pytorch
+  420  module load pytorch/2.3.1
+  421  nvcc --version
+  422  grep -r "#include.*Common" .
+  423  env | grep -i cuda
+  424  ./compile.sh
+  425  cmake --version
+  426  module spider cmake
+  427  cmake --version
+  428  module load pytorch/2.4
+  429  module load pytorch/2.4.1
+  430  module load pytorch/2.4.0
+  431  module load cmake/3.30.2
+  432  ./compile.sh
+  433  cd build/
+  434  cd ..
+  435  ./compile.sh
+  436  ls /opt/nvidia/hpc_sdk/Linux_x86_64/23.9/cuda/12.2/targets/x86_64-linux/examples/
+  437  find /opt/nvidia/hpc_sdk/Linux_x86_64/23.9/cuda -name "helper_cuda.h" 2>/dev/null
+  438  cd ..
+  439  ls
+  440  mkdir -p ~/software/cuda
+  441  ls
+  442  cd software/cuda/
+  443  git clone https://github.com/NVIDIA/cuda-samples.git
+  444  ls
+  445  cd cuda-samples/
+  446  ls
+  447  cd ..
+  448  ls
+  449  cd my_QBOX_RTTDDFT/
+  450  cd QBOX_RTTDDFT/
+  451  cd TurboFFT/
+  452  ./compile.sh
+  453  cd build/
+  454  ./turbofft 10 16 1 0 0 
+  455  ./turbofft 10 16 0 1 0 
+  456  ./turbofft 10 16 0 1 0
+  457  ./turbofft
+  458  ./turbofft --if_bench 10 --thread_bs 16 --gpu A100 --datatype 1 --if_ft 0 --if_err 0
+  459  cd TurboFFT/build/
+  460  ./turbofft --if_bench 0 --thread_bs 0 --gpu A100 --datatype 0 --if_ft 0 --if_err 1
+  461  ./turbofft --if_bench 12 --thread_bs 16 --gpu A100 --datatype 0 --if_ft 1 --if_err 1
+  462  ./turbofft --if_bench 10 --thread_bs 16 --gpu A100 --datatype 0 --if_ft 1 --if_err 1
+  463  ./turbofft --logN 10 --thread_bs 16 --if_profile 1 --if_verify 0 --if_bench 0
+  464  # 可以尝试以下命令
+  465  ./turbofft --logN 10 --bs 1 --t
+  466  ./turbofft --logN 10 --bs 1 --thread_bs 16 --if_profile 1 --if_verify 0 --if_bench 0
+  467  ./turbofft --logN 10 --bs 1 --thread_bs 16 --if_profile 0 --if_verify 1 --if_bench 0
+  468  ./turbofft 10 16 1 0 0 
+  469  ./turbofft --logN 10 --thread_bs 16 --if_profile 1 --if_verify 0 --if_bench 0 --bs 16
+  470  ./turbofft --logN 10 --thread_bs 16 --if_profile 0 --if_verify 1 --if_bench 0 --bs 16
+  471  ./turbofft --logN 10 --thread_bs 16 --if_verify 1 --if_bench 0 --bs 16 --if_profile 0 --if_ft 0 --if_err 0 --datatype 0 --gpu A100
+  472  ./turbofft --logN 10 --thread_bs 16 --if_verify 1 --if_bench 0 --if_profile 0 --if_ft 0 --if_err 0 --datatype 0 --gpu A100
+  473  ./turbofft --logN 10 --bs 1 --thread_bs 8 --if_verify 1 --if_bench 0 --if_profile 0 --if_ft 0 --if_err 0 --datatype 0 --gpu A100
+  474  ./turbofft --logN 7 --bs 1 --thread_bs 8 --if_verify 1 --if_bench 0
+  475  ./turbofft --logN 10 --bs 16 --if_verify 0 --if_bench 0 --if_profile 1
+  476  ./turbofft --logN 10 --bs 16 --if_verify 1 --if_bench 0 --if_profile 0
+  477  ./turbofft --logN 7 --bs 1 --if_verify 1 --if_bench 0 --if_profile 0
+  478  cd QBOX_RTTDDFT/
+  479  cd Fault-Tolerant-SGEMM-on-NVIDIA-GPUs/
+  480  ./ft_sgemm 1024 6144 512 0 16
+  481  cd artifact/
+  482  make -j4
+  483  ./ft_sgemm 1024 6144 512 0 16
+  484  cd ..
+  485  cd TurboFFT/
+  486  cd build/
+  487  ./turbofft 10 16 1 0 0 
+  488  cd TurboFFT/
+  489  cd build/
+  490  ./turbofft 10 16 1 0 0
+  491  ./turbofft --logN 10 --thread_bs 16 --if_verify 0 --if_bench 0 --if_profile 1 --if_ft 0 --if_err 0 --datatype 0 --gpu A100
+  492  ./turbofft --logN 10 --bs 16 --if_verify 0 --if_bench 0 --if_profile 1 --if_ft 0 --if_err 0 --datatype 0 --gpu A100
+  493  ./turbofft --logN 10 --bs 16 --if_verify 1 --if_bench 0 --if_profile 0 --if_ft 0 --if_err 0 --datatype 0 --gpu A100
+  494  ./turbofft --logN 0 --bs 0 --if_verify 0 --if_bench 1 --if_profile 0 --if_ft 0 --if_err 0 --datatype 0 --gpu A100
+  495  scp root@104.168.219.190:~/sshproxy ~/.ssh/
+  496  cd ~/.ssh
+  497  ls
+  498  ./sshproxy -u sliu424
+  499  history
+  500  git checkout
+  501  cd ..
+  502  git clone https://github.com/shixun404/QBOX_TDDFT_GPU.git
+  503  ls
+  504  cd QBOX_TDDFT_GPU/
+  505  ls
+  506  nvidia-smi
+  507  ls
+  508  cd ..
+  509  ls
+  510  cd QBOX_RTTDDFT/
+  511  cd..
+  512  cd ..
+  513  ls
+  514  cd xerces-3.2.4/
+  515  ls
+  516  cd ..
+  517  ls
+  518  cd QBOX_RTTDDFT/
+  519  cd src
+  520  make TARGET=../build/perlmutter -j 16
+  521  module show cray-fftw
+  522  make TARGET=../build/perlmutter -j 16
+  523  ls /opt/cray/pe/fftw/3.3.10.6/x86_milan/lib
+  524  module load PrgEnv-nvidia
+  525  cd ..
+  526  module load PrgEnv-nvidia
+  527  cd src/
+  528  nvcc -c device_basis_mapping.cu
+  529  make TARGET=../build/perlmutter -j 16
+  530  make clean
+  531  make TARGET=../build/perlmutter -j 16
+  532  which lfftw3_threads
+  533  module swap PrgEnv-gnu PrgEnv-nvidia
+  534  module PrgEnv-gnu
+  535  module load PrgEnv-gnu
+  536  module swap PrgEnv-gnu PrgEnv-nvidia
+  537  module load cray-fftw
+  538  nvcc -c device_basis_mapping.cu
+  539  make TARGET=../build/perlmutter -j 16
+  540  cp -r /pscratch/sd/s/swu264/QBox-TDDFT/examples ./
+  541  scp -r root@104.168.219.190:~/examples ./
+  542  cd build
+  543  module swap PrgEnv-gnu PrgEnv-nvhpc
+  544  module load cray-fftw cray-libsci
+  545  cd src
+  546  cd ..
+  547  cd src
+  548  make TARGET=../build/perlmutter -j 16
+  549  cd ..
+  550  ls
+  551  cd xerces-3.2.4/
+  552  ls
+  553  ls lib/
+  554  ls bin/
+  555  cd ..
+  556  ls
+  557  cd QBOX_TDDFT_GPU/GPU
+  558  cd QBOX_TDDFT_GPU
+  559  cd build/
+  560  module swap PrgEnv-gnu PrgEnv-nvidia
+  561  module load PrgEnv-nvidia
+  562  module swap PrgEnv-gnu PrgEnv-nvidia
+  563  module load PrgEnv-gnu
+  564  module swap PrgEnv-gnu PrgEnv-nvidia
+  565  module load cray-fftw cray-libsci
+  566  cd ..
+  567  cd src/
+  568  module load PrgEnv-gnu
+  569  module load PrgEnv-nvidia
+  570  module swap PrgEnv-gnu PrgEnv-nvidia
+  571  module load PrgEnv-gnu
+  572  module swap PrgEnv-gnu PrgEnv-nvidia
+  573  module load cray-fftw cray-libsci
+  574  make TARGET=../build/perlmutter -j 16
+  575  module unload darshan
+  576  make TARGET=../build/perlmutter -j 16
+  577  module list
+  578  which CC
+  579  CC --version
+  580  make TARGET=../build/perlmutter -j 16
+  581  ls device_basis_mapping.*
+  582  make TARGET=../build/perlmutter -j 16
+  583  cd src
+  584  make clean
+  585  make perlmutter clean
+  586  make /perlmutter clean
+  587  make TARGET=perlmutter
+  588  make TARGET=perlmutter clean
+  589  module swap PrgEnv-gnu PrgEnv-nvhpc
+  590  module load cray-fftw cray-libsci
+  591  nvcc -c device_basis_mapping.cu
+  592  make TARGET=perlmutter clean
+  593  make TARGET=perlmutter -j 16
+  594  make TARGET=perlmutter clean
+  595  make TARGET=perlmutter -j 16
+  596  make TARGET=perlmutter clean
+  597  make TARGET=perlmutter -j 16
+  598  ls *device_basis_mapping*
+  599  make TARGET=perlmutter clean
+  600  module load PrgEnv-nvidia
+  601  module swap PrgEnv-gnu PrgEnv-nvidia
+  602  module load PrgEnv-gnu
+  603  module swap PrgEnv-gnu PrgEnv-nvidia
+  604  module load cray-fftw cray-libsci
+  605  make TARGET=perlmutter clean
+  606  nvcc -c device_basis_mapping.cu
+  607  make TARGET=perlmutter -j 16
+  608  make TARGET=perlmutter clean
+  609  nvcc -c device_basis_mapping.cu
+  610  make TARGET=perlmutter -j 16
+  611  module list
+  612  module list nvidia
+  613  module unload PrgEnv-nvidia
+  614  module unload nvidia
+  615  module load nvidia/23.9
+  616  module load PrgEnv-nvidia
+  617  make TARGET=perlmutter clean
+  618  make TARGET=perlmutter -j 16
+  619  make TARGET=perlmutter clean
+  620  make TARGET=perlmutter -j 16
+  621  which nvcc
+  622  make TARGET=perlmutter clean
+  623  make TARGET=perlmutter -j 16
+  624  make TARGET=perlmutter clean
+  625  make TARGET=perlmutter -j 16
+  626  make TARGET=perlmutter clean
+  627  nvcc -c device_basis_mapping.cu
+  628  make TARGET=perlmutter -j 16
+  629  make TARGET=perlmutter clean
+  630  nvcc -c device_basis_mapping.cu
+  631  make TARGET=perlmutter -j 16
+  632  ls /opt/nvidia/hpc_sdk/Linux_x86_64/22.7/math_libs/lib64
+  633  ls /opt/nvidia/hpc_sdk/Linux_x86_64/22.7/cuda/lib64
+  634  which lutilities
+  635  make TARGET=perlmutter clean
+  636  nvcc -c device_basis_mapping.cu
+  637  make TARGET=perlmutter -j 16
+  638  make TARGET=perlmutter clean
+  639  nvcc -c device_basis_mapping.cu
+  640  make TARGET=perlmutter -j 16
+  641  find / -name "libutilities.so" 2>/dev/null
+  642  cd src
+  643  module list
+  644  module unload cudatoolkit
+  645  module unload PrgEnv-nvidia
+  646  module unload nvidia
+  647  module load cuda/12.0
+  648  module spider cuda
+  649  module spider cudatoolkit/12.0
+  650  module load PrgEnv-nvidia
+  651  module load cudatoolkit/12.0
+  652  module load PrgEnv-nvidia
+  653  module list
+  654  module swap PrgEnv-gnu PrgEnv-nvhpc
+  655  module load PrgEnv-gnu
+  656  module swap PrgEnv-gnu PrgEnv-nvhpc
+  657  module load cray-fftw cray-libsci
+  658  nvcc -c device_basis_mapping.cu
+  659  make TARGET=perlmutter clean
+  660  nvcc -c device_basis_mapping.cu
+  661  make TARGET=perlmutter -j 16
+  662  cd src/
+  663  module unload cudatoolkit
+  664  module unload PrgEnv-nvidia
+  665  module load cudatoolkit/12.0
+  666  module load PrgEnv-nvidia
+  667  module list
+  668  module load cray-fftw cray-libsci
+  669  make TARGET=perlmutter clean
+  670  nvcc -c device_basis_mapping.cu
+  671  make TARGET=perlmutter -j 16
+  672  make TARGET=perlmutter clean
+  673  module swap PrgEnv-nvidia PrgEnv-nvhpc
+  674  make TARGET=perlmutter -j 16
+  675  module unload cudatoolkit
+  676  module load cudatoolkit/12.4
+  677  module unload nvhpc、
+  678  module unload nvhpc
+  679  module load cudatoolkit/12.4
+  680  module load PrgEnv-nvidia
+  681  module list
+  682  make TARGET=perlmutter clean
+  683  nvcc -c device_basis_mapping.cu
+  684  make TARGET=perlmutter clean
+  685  make TARGET=perlmutter -j 16
+  686  make TARGET=perlmutter clean
+  687  nvcc -c device_basis_mapping.cu
+  688  make TARGET=perlmutter -j 16
+  689  make TARGET=perlmutter clean
+  690  nvcc -c device_basis_mapping.cu
+  691  make TARGET=perlmutter -j 16
+  692  make TARGET=perlmutter clean
+  693  module swap PrgEnv-nvhpc PrgEnv-nvidia
+  694  module list
+  695  nvcc -c device_basis_mapping.cu
+  696  make TARGET=perlmutter clean
+  697  module unload cudatoolkit
+  698  module load PrgEnv-nvidia
+  699  module swap PrgEnv-gnu PrgEnv-nvidia
+  700  module list
+  701  module load cudatoolkit
+  702  module list
+  703  nvcc -c device_basis_mapping.cu
+  704  make TARGET=perlmutter -j 16
+  705  make TARGET=perlmutter clean
+  706  module load cudatoolkit/12.4
+  707  make TARGET=perlmutter -j 16
+  708  make TARGET=perlmutter clean
+  709  module list
+  710  module load PrgEnv-nvidia
+  711  nvcc -c device_basis_mapping.cu
+  712  make TARGET=perlmutter -j 16
+  713  ./qb --help
+  714  cd ..
+  715  cd examples/example0D/
+  716  sbatch Batch.sh
+  717  squeue -j 35833309
+  718  ls
+  719  ./sshproxy -u sliu424
+  720  cd ..
+  721  ls
+  722  cd QBOX_TDDFT_GPU/
+  723  cd examples/example0D/git checkout
+  724  git checkout
+  725  exit
+  726  ./qb -nstb 1 -nkpb 1 -nspb 1 < ../examples/example0D/td.in
+  727  ls
+  728  exit
+  729  history
+  730  ls
+  731  cd ..
+  732  mkdir swu264
+  733  cp -r QBOX_TDDFT_GPU/ swu264/
+  734  cd swu264/
+  735  ls
+  736  nvidia-smi
+  737  ls
+  738  cd QBOX_TDDFT_GPU/
+  739  ls
+  740  cd build/
+  741  ls
+  742  cd ..
+  743  cd src
+  744  ls
+  745  make -j
+  746  history
+  747  module load PrgEnv-nvidia
+  748  nvcc -c device_basis_mapping.cu
+  749  make TARGET=perlmutter -j 16
+  750  history
+  751  module load cudatoolkit/12.4
+  752  make TARGET=perlmutter -j 16
+  753  module load PrgEnv-nvidia
+  754  make TARGET=perlmutter -j 16
+  755  make clean; make TARGET=perlmutter -j 16
+  756  history
+  757  history | grep module
+  758  module load cray-fftw cray-libsci
+  759  make clean; make TARGET=perlmutter -j 16
+  760  history | grep gcc
+  761  module load  module load PrgEnv-nvidia
+  762  history | grep gcc
+  763  make clean; make TARGET=perlmutter -j 16
+  764  ke TARGET=perlmutter -j 16
+  765  ls
+  766  cd ..
+  767  cd -
+  768  ls
+  769  make -j
+  770  make TARGET=perlmutter -j 16
+  771  make clean
+  772  history | grep make
+  773  make TARGET=perlmutter clean; make TARGET=perlmutter -j 16
+  774  tmux
+  775  ls
+  776  history
+  777  cd src
+  778  history
+  779  make TARGET=perlmutter -j 16
+  780  module load cudatoolkit/12.2
+  781  nvcc --version
+  782  make TARGET=perlmutter -j 16
+  783  make TARGET=perlmutter clean; make TARGET=perlmutter -j 16
+  784  nvcc -c device_basis_mapping.cu
+  785  history
+  786  history | grep make
+  787  ./qb.o
+  788  make -j
+  789  make TARGET=perlmutter clean; make TARGET=perlmutter -j 16 install
+  790  make TARGET=perlmutter clean; make TARGET=perlmutter -j 16 
+  791  history
+  792  ./compile.sh
+  793  bash compile.sh
+  794  ake TARGET=p./erlmutter -j 16 
+  795  make TARGET=p./erlmutter -j 16 
+  796  make TARGET=./erlmutter -j 16 
+  797  make TARGET=./perlmutter -j 16 
+  798  nvcc --version
+  799  ls
+  800  make TARGET=./perlmutter -j 16 
+  801  history | grep ncc
+  802  history | grep nvcc
+  803  make TARGET=./perlmutter -j 16 
+  804  rm qb.o
+  805  ls
+  806  rm *.o
+  807  ls
+  808  nvcc --version
+  809  make TARGET=./perlmutter -j 16 
+  810  module load cudatoolkit/12.4
+  811  make TARGET=./perlmutter -j 16 
+  812  history | grep module
+  813  module load PrgEnv-nvidia
+  814  make TARGET=./perlmutter -j 16 
+  815  ./qb
+  816  tmux
+  817  history
+  818  ls
+  819  cd ..
+  820  ls
+  821  git remote -v
+  822  git add .
+  823  git commit -m "GPU nersc"
+  824  git reset
+  825  vim .gitignore
+  826  git add .gitignore
+  827  git commit
+  828  git push
+  829  git add .
+  830  git commit
+  831  history > nersc_history
